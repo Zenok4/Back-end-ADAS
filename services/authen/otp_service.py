@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from models.auth_otp import AuthOTP
 from models.user import User
 from database import db
@@ -8,7 +8,7 @@ from werkzeug.security import check_password_hash
 class OTPService:
 
     @staticmethod
-    def send_otp(phone: str, purpose="login"):
+    def send_phone_otp(phone: str, purpose="login"):
         """
         Kiểm tra user tồn tại, tạo OTP, lưu DB và trả OTP (hoặc gửi qua SMS)
         """
@@ -21,7 +21,7 @@ class OTPService:
             phone=phone,
             otp_code=otp_code,
             purpose=purpose,
-            expires_at=datetime.now() + timedelta(minutes=5)
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=5)
         )
         db.session.add(otp)
         db.session.commit()
@@ -31,14 +31,14 @@ class OTPService:
         return {"message": "OTP sent"}
 
     @staticmethod
-    def verify_otp(phone: str, otp_code: str, purpose="login"):
+    def verify_phone_otp(phone: str, otp_code: str, purpose="verify"):
         """
         Kiểm tra OTP hợp lệ, đánh dấu đã dùng, trả user nếu đúng
         """
-        otp = AuthOTP.query.filter_by(phone=phone, otp_code=otp_code, used=False, purpose=purpose, used=False).first()
+        otp = AuthOTP.query.filter_by(phone=phone, otp_code=otp_code, used=False, purpose=purpose).first()
         if not otp:
             return {"error": "OTP not found or already used"}
-        if otp.expires_at < datetime.utcnow():
+        if otp.expires_at < datetime.now(timezone.utc):
             return {"error": "OTP expired"}
 
         user = User.query.filter_by(phone=phone).first()
@@ -54,9 +54,10 @@ class OTPService:
         # gọi API SMS thực tế, ví dụ Twilio
         print(f"Send OTP {otp_code} to {phone}")
 
+
     ### ================== Email ==================
     @staticmethod
-    def send_email_otp(email: str, purpose="verify"):
+    def send_email_otp(email: str, purpose="login"):
         """
         Kiểm tra user tồn tại theo email, tạo OTP, lưu DB và gửi email
         """
@@ -66,10 +67,10 @@ class OTPService:
 
         otp_code = str(random.randint(100000, 999999))
         otp = AuthOTP(
-            phone=None,  # email OTP không cần phone
+            email=email,
             otp_code=otp_code,
             purpose=purpose,
-            expires_at=datetime.now() + timedelta(minutes=5)
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=5)
         )
         db.session.add(otp)
         db.session.commit()
@@ -78,7 +79,7 @@ class OTPService:
         return {"message": "OTP sent"}
 
     @staticmethod
-    def verify_email_otp(email: str, password: str, otp_code: str = None):
+    def verify_email_otp(email: str, password: str, otp_code: str = None, purpose="verify"):
         """
         Kiểm tra email + password + OTP (nếu có)
         """
@@ -87,8 +88,8 @@ class OTPService:
             return {"error": "Invalid email or password"}
 
         if otp_code:
-            otp = AuthOTP.query.filter_by(otp_code=otp_code, used=False, purpose="verify").first()
-            if not otp or otp.expires_at < datetime.utcnow():
+            otp = AuthOTP.query.filter_by(otp_code=otp_code, email=email, used=False, purpose=purpose).first()
+            if not otp or otp.expires_at < datetime.now(timezone.utc):
                 return {"error": "Invalid or expired verification code"}
             otp.used = True
             db.session.commit()

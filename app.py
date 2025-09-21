@@ -6,23 +6,12 @@ from logger import logger
 import time
 from werkzeug.exceptions import HTTPException
 from type.http_constants import HttpCode
-from config import JWT_SECRET_KEY, SESSION_SECRET_KEY
+from config import JWT_SECRET_KEY
 from database import get_mysql_connection
 from endpoints.auth_enpoints import auth_bp
-from models import init_app
+from models import init_dtb
 
 app = Flask(__name__)
-
-# ========== Cấu hình session ==========
-app.secret_key = SESSION_SECRET_KEY
-
-app.config["SESSION_TYPE"] = "filesystem"
-app.config["SESSION_PERMANENT"] = True
-app.config["SESSION_USE_SIGNER"] = True
-app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-app.config["SESSION_COOKIE_SECURE"] = False  # Đặt True nếu dùng HTTPS
-Session(app)
 
 # ========== Cấu hình JWT ==========
 app.config["JWT_SECRET_KEY"] = JWT_SECRET_KEY
@@ -35,16 +24,20 @@ app.register_blueprint(auth_bp, url_prefix="/auth")
 
 # ========== TEST Connection ==========
 def test_connection():
+    """
+    Kiểm tra kết nối giữa server và database
+    """
     try:
         mysql_conn = get_mysql_connection()
         mysql_cursor = mysql_conn.cursor()
-        mysql_cursor.execute("SELECT COUNT(*) FROM employees")
+        mysql_cursor.execute("SELECT COUNT(*) FROM users")
         mysql_cursor.fetchone()
         mysql_conn.close()
 
         return {"status": "success", "message": "Database connections successful!"}
     except Exception as e:
         return {"status": "failed", "error": str(e)}
+    
 @app.route("/test-connection", methods=["GET"])
 def test_connection_api():
     return jsonify(test_connection())
@@ -53,7 +46,7 @@ def test_connection_api():
 ############################################
 # ========== Init ==========
 # Init Database cho hệ thống
-init_app(app)
+init_dtb(app)
 
 
 

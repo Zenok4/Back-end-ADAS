@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional, List, Tuple, Dict, Any
 
 ROOT = Path(__file__).resolve().parent  # thư mục backend
-OUT = ROOT / "REAdME.md"
+OUT = ROOT / "README.md"
 
 HTTP_DECORATOR_METHODS = {
     "get": ["GET"],
@@ -130,40 +130,63 @@ def generate_readme(structure_only=False, endpoints_only=False):
     # Phần hướng dẫn setup
     setup_md = """# Backend API Documentation
 
-## 🚀 Hướng dẫn cài đặt môi trường
+## 🚀 Hướng Dẫn Thiết Lập Dự Án
 
-1. Tạo môi trường ảo trong thư mục `backend/libs`
-   ```bash
-   cd backend
-   python -m venv libs
-   ```
+## 1. Tạo môi trường ảo
+Tạo môi trường ảo trong thư mục `backend/libs`:
 
-2. Kích hoạt môi trường ảo  
-   - Gõ lệnh dưới đây:
-     ```bash
-     libs\\Scripts\\activate
-     ```
-   - Nếu lệnh trên không được thì dùng lệnh này:
-     ```bash
-     source libs\\Scripts\\activate
-     ```
+```bash
+cd backend
+python -m venv libs
+```
 
-3. Cài đặt thư viện cần thiết
-   ```bash
-   pip install -r requirements.txt
-   ```
+## 2. Kích hoạt môi trường ảo
+Kích hoạt môi trường ảo bằng một trong hai lệnh sau:
 
-4. Chạy project
-   ```bash
-   python app.py
-   ```
+- Lệnh 1:
+  ```bash
+  libs\\Scripts\\activate
+  ```
 
-5. Nếu cần cài thêm thư viện
-   - Gõ lệnh dưới đây:
-   ```bash
-   pip install <tên_thư_viện>
-   pip freeze > requirements.txt
-   ```
+- Lệnh 2 (nếu lệnh trên không hoạt động):
+  ```bash
+  source libs\\Scripts\\activate
+  ```
+
+## 3. Cài đặt thư viện cần thiết
+Cài đặt các thư viện từ tệp `requirements.txt`:
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+## 4. Tạo và đồng bộ hóa database
+Chạy lệnh migration để tạo hoặc cập nhật schema cơ sở dữ liệu:
+
+    ```bash
+    python -m migrations.run_migrate
+    ```
+
+Nếu muốn xóa các cột không có trong models, thêm tùy chọn `--drop`:
+
+    ```bash
+    python -m migrations.run_migrate --drop
+    ```
+
+## 5. Chạy project
+Khởi động dự án bằng lệnh:
+
+    ```bash
+    python app.py
+    ```
+
+## 6. Cài thêm thư viện
+Nếu cần cài thêm thư viện, sử dụng các lệnh sau:
+
+    ```bash
+    pip install <tên_thư_viện>
+    pip freeze > requirements.txt
+    ```
 """
 
     # Cấu trúc thư mục
@@ -209,7 +232,7 @@ def generate_readme(structure_only=False, endpoints_only=False):
     readme_parts.append("---\n\n> File này được tạo tự động bởi `generate_readme.py`. Đừng chỉnh sửa thủ công!")
 
     OUT.write_text("\n".join(readme_parts), encoding="utf-8")
-    print(f"✅ API.md created/updated at {OUT}")
+    print(f"✅ README.md created/updated at {OUT}")
     print(f" - Endpoints found: {len(endpoints_all)}")
 
 

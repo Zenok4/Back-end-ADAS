@@ -2,9 +2,7 @@ import os
 from dotenv import load_dotenv
 
 # load file .env từ thư mục root
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  
-ENV_PATH = os.path.join(BASE_DIR, ".env")
-load_dotenv(ENV_PATH)
+load_dotenv()
 
 
 #############################
@@ -22,5 +20,6 @@ DB_CONFIG = {
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")  # mặc định HS256 nếu không có
 
-# Cấu hình Secret Key cho Flask Session
-SESSION_SECRET_KEY = os.getenv("SESSION_SECRET_KEY", "default_secret_key")
+# Cấu hình Secret Key
+SECRET_KEY = os.getenv("SECRET_KEY")
+REFRESH_SECRET_KEY = os.getenv("REFRESH_SECRET_KEY")

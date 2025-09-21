@@ -10,5 +10,14 @@ class User(db.Model):
     phone = db.Column(db.String(30), unique=True)
     password_hash = db.Column(db.String(255), nullable=False)
     display_name = db.Column(db.String(255))
-    is_active = db.Column(db.Boolean, default=True)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
     created_at = db.Column(db.DateTime, default=datetime.now())
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "username": self.username,
+            "email": self.email,
+            "phone": self.phone,
+            "display_name": self.display_name
+        }

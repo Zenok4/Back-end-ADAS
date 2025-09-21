@@ -156,37 +156,37 @@ Kích hoạt môi trường ảo bằng một trong hai lệnh sau:
 ## 3. Cài đặt thư viện cần thiết
 Cài đặt các thư viện từ tệp `requirements.txt`:
 
-    ```bash
-    pip install -r requirements.txt
-    ```
+```bash
+pip install -r requirements.txt
+```
 
 ## 4. Tạo và đồng bộ hóa database
 Chạy lệnh migration để tạo hoặc cập nhật schema cơ sở dữ liệu:
 
-    ```bash
-    python -m migrations.run_migrate
-    ```
+```bash
+python -m migrations.run_migrate
+```
 
 Nếu muốn xóa các cột không có trong models, thêm tùy chọn `--drop`:
 
-    ```bash
-    python -m migrations.run_migrate --drop
-    ```
+```bash
+python -m migrations.run_migrate --drop
+```
 
 ## 5. Chạy project
 Khởi động dự án bằng lệnh:
 
-    ```bash
-    python app.py
-    ```
+```bash
+python app.py
+```
 
 ## 6. Cài thêm thư viện
 Nếu cần cài thêm thư viện, sử dụng các lệnh sau:
 
-    ```bash
-    pip install <tên_thư_viện>
-    pip freeze > requirements.txt
-    ```
+```bash
+pip install <tên_thư_viện>
+pip freeze > requirements.txt
+```
 """
 
     # Cấu trúc thư mục

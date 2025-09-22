@@ -24,9 +24,6 @@ app.register_blueprint(auth_bp, url_prefix="/auth")
 
 # ========== TEST Connection ==========
 def test_connection():
-    """
-    Kiểm tra kết nối giữa server và database
-    """
     try:
         mysql_conn = get_mysql_connection()
         mysql_cursor = mysql_conn.cursor()
@@ -40,6 +37,9 @@ def test_connection():
     
 @app.route("/test-connection", methods=["GET"])
 def test_connection_api():
+    """
+    Kiểm tra kết nối giữa server và database
+    """
     return jsonify(test_connection())
 
 

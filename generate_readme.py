@@ -136,7 +136,7 @@ def generate_readme(structure_only=False, endpoints_only=False):
 Tạo môi trường ảo trong thư mục `backend/libs`:
 
 ```bash
-cd backend
+cd Back-end-ADAS
 python -m venv libs
 ```
 

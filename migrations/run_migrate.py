@@ -1,4 +1,5 @@
 import argparse
+import inspect
 from flask import Flask
 from models import init_dtb
 from . import (
@@ -25,11 +26,10 @@ def run_migrations(app, drop=False):
     changed = False
 
     for migrate in MIGRATIONS:
-        # Kiểm tra xem hàm có nhận tham số drop không
-        try:
+        sig = inspect.signature(migrate)
+        if "drop" in sig.parameters:
             result = migrate(app, drop=drop)
-        except TypeError:
-            # Nếu không nhận drop thì gọi bình thường
+        else:
             result = migrate(app)
 
         # Kiểm tra xem có thay đổi nào không

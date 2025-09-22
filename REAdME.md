@@ -6,7 +6,7 @@
 Tạo môi trường ảo trong thư mục `backend/libs`:
 
 ```bash
-cd backend
+cd Back-end-ADAS
 python -m venv libs
 ```
 
@@ -59,7 +59,7 @@ pip freeze > requirements.txt
 ```
 
 
-**Generated:** 2025-09-21 16:55:56
+**Generated:** 2025-09-21 23:01:50
 
 ## 📂 Cấu trúc thư mục
 
@@ -92,7 +92,7 @@ _12 endpoint(s) found._
 
 | Method(s) | Path | Function | File | Description |
 |-----------|------|----------|------|-------------|
-| GET | `/test-connection` | `test_connection_api()` | `app.py` |  |
+| GET | `/test-connection` | `test_connection_api()` | `app.py` | Kiểm tra kết nối giữa server và database |
 | POST | `/login/username` | `login_username()` | `endpoints\auth_enpoints.py` | Đăng nhập bằng username + password. |
 | POST | `/login/phone/otp` | `request_phone_otp()` | `endpoints\auth_enpoints.py` | Gửi OTP về số điện thoại để đăng nhập. |
 | POST | `/login/phone/verify` | `verify_phone_otp()` | `endpoints\auth_enpoints.py` | Xác thực OTP để đăng nhập bằng số điện thoại. |

@@ -1,7 +1,9 @@
-# services/authen/user_service.py
 from datetime import datetime, timezone
 from models.user import User
 from models.sessions import UserSession
+from helper.normalization_response import response_success, response_error
+from pytz import UTC
+from type.http_constants import HttpCode
 
 class UserService:
     @staticmethod
@@ -14,26 +16,29 @@ class UserService:
         session = UserSession.query.filter_by(session_id=session_id).first()
 
         if not session:
-            return {"error": "Session not found"}
+            return response_error(
+                message="Session not found",
+                code=HttpCode.unauthorized
+            )
 
         if session.revoked:
-            return {"error": "Session revoked"}
+            return response_error(
+                message="Session revoked",
+                code=HttpCode.unauthorized,
+            )
 
-        if session.expires_at and session.expires_at < datetime.now(timezone.utc):
-            return {"error": "Session expired"}
+        # Đảm bảo session.expires_at là offset-aware
+        expires_at = session.expires_at
+        if expires_at and not expires_at.tzinfo:  # Kiểm tra nếu expires_at là naive
+            expires_at = expires_at.replace(tzinfo=UTC)  # Thêm múi giờ UTC
+
+        if expires_at and expires_at < datetime.now(timezone.utc):
+            return response_error(message="Session expired", code=HttpCode.unauthorized)
 
         user = User.query.get(session.user_id)
         if not user:
-            return {"error": "User not found"}
+            return response_error(message="User not found", code=HttpCode.not_found)
 
-        return {
-            "success": True,
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email,
-                "phone": user.phone,
-                "display_name": user.display_name,
-                "created_at": user.created_at,
-            }
-        }
+
+        return response_success(data=user.to_dict(), key="user", message="Get infomation successfull", code=HttpCode.success)
+    

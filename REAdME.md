@@ -59,7 +59,7 @@ pip freeze > requirements.txt
 ```
 
 
-**Generated:** 2025-09-21 23:01:50
+**Generated:** 2025-09-22 15:52:11
 
 ## 📂 Cấu trúc thư mục
 
@@ -68,6 +68,7 @@ backend/
 ├── 📂 .git/
 ├── 📂 __pycache__/
 ├── 📂 endpoints/
+├── 📂 helper/
 ├── 📂 libs/
 ├── 📂 logs/
 ├── 📂 middlewares/

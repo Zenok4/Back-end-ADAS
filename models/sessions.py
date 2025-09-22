@@ -15,6 +15,9 @@ class UserSession(db.Model):
     expires_at = db.Column(db.DateTime, nullable=True)
 
     revoked = db.Column(db.Boolean, default=False)
+    
+    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    create_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
 
     # Quan hệ tới User (nếu cần lấy user từ session)
     user = db.relationship("User", backref="sessions")

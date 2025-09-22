@@ -1,6 +1,6 @@
-from enum import Enum
+from enum import IntEnum, Enum
 
-class HttpCode(Enum):
+class HttpCode(IntEnum):
     # 2xx Success
     success = 200
     created = 201

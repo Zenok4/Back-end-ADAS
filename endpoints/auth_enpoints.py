@@ -1,10 +1,11 @@
-# routes/auth.py
+from datetime import timedelta
 from flask import Blueprint, request, jsonify
 from services.authen.login import LoginService
 from services.authen.session_service import SessionService
 from services.authen.user_service import UserService
 from services.authen.register import RegisterService
 from type.http_constants import HttpCode
+from helper.normalization_response import response_error, response_success
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -14,106 +15,241 @@ auth_bp = Blueprint("auth", __name__)
 def login_username():
     """
     Đăng nhập bằng username + password.
+    - Input JSON: { "username": "...", "password": "..." }
+    - Trả về: { success: true, message: string, code: int, data: { session_id, user, access_token, refresh_token, expires_in } } nếu thành công
     """
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     username = data.get("username")
     password = data.get("password")
 
     if not username or not password:
-        return jsonify({"success": False, "error": "Username and password required"}), HttpCode.bad_request
+        return jsonify(
+            response_error(
+                message="Username and password required",
+                code=HttpCode.bad_request,
+                data={}
+            )
+        ), HttpCode.bad_request
 
     result = LoginService.login_with_username(username, password)
-    status = HttpCode.success if result.get("success") else HttpCode.unauthorized
-    return jsonify(result), status
+    if "error" in result:
+        return jsonify(
+            response_error(
+                message=result["error"],
+                code=HttpCode.unauthorized,
+                data={}
+            )
+        ), HttpCode.unauthorized
+
+    return jsonify(
+        response_success(
+            data={
+                "session_id": result["session_id"],
+                "user": result["user"],
+                "access_token": result["access_token"],
+                "refresh_token": result["refresh_token"],
+                "expires_in": result["expires_in"]
+            },
+            message="Login successful",
+            code=HttpCode.success
+        )
+    ), HttpCode.success
 
 
-## ================== Phone OTP ==================
+# ================== Phone OTP ==================
 @auth_bp.route("/login/phone/otp", methods=["POST"])
 def request_phone_otp():
     """
     Gửi OTP về số điện thoại để đăng nhập.
+    - Input JSON: { "phone": "..." }
+    - Trả về: { success: true, message: string, code: int, data: {} } nếu gửi OTP thành công
     """
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     phone = data.get("phone")
 
     if not phone:
-        return jsonify({"success": False, "error": "Phone required"}), HttpCode.bad_request
+        return jsonify(
+            response_error(
+                message="Phone required",
+                code=HttpCode.bad_request,
+                data={}
+            )
+        ), HttpCode.bad_request
 
     result = LoginService.request_phone_otp(phone)
-    status = HttpCode.success if "message" in result else HttpCode.bad_request
-    return jsonify(result), status
+    if "error" in result:
+        return jsonify(
+            response_error(
+                message=result["error"],
+                code=HttpCode.bad_request,
+            )
+        ), HttpCode.bad_request
 
+    return jsonify(
+        response_success(
+            message=result.get("message", "OTP sent successfully"),
+            code=HttpCode.success
+        )
+    ), HttpCode.success
 
 @auth_bp.route("/login/phone/verify", methods=["POST"])
 def verify_phone_otp():
     """
     Xác thực OTP để đăng nhập bằng số điện thoại.
+    - Input JSON: { "phone": "...", "otp_code": "..." }
+    - Trả về: { success: true, message: string, code: int, data: { session_id, user, access_token, refresh_token, expires_in } } nếu thành công
     """
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     phone = data.get("phone")
     otp_code = data.get("otp_code")
 
     if not phone or not otp_code:
-        return jsonify({"success": False, "error": "Phone and OTP required"}), HttpCode.bad_request
+        return jsonify(
+            response_error(
+                message="Phone and OTP required",
+                code=HttpCode.bad_request,
+            )
+        ), HttpCode.bad_request
 
     result = LoginService.login_with_phone_otp(phone, otp_code)
-    status = HttpCode.success if result.get("success") else HttpCode.unauthorized
-    return jsonify(result), status
+    if "error" in result:
+        return jsonify(
+            response_error(
+                message=result["error"],
+                code=HttpCode.unauthorized,
+            )
+        ), HttpCode.unauthorized
 
+    return jsonify(
+        response_success(
+            data={
+                "session_id": result["session_id"],
+                "user": result["user"],
+                "access_token": result["access_token"],
+                "refresh_token": result["refresh_token"],
+                "expires_in": result["expires_in"]
+            },
+            message="Login successful",
+            code=HttpCode.success
+        )
+    ), HttpCode.success
 
-## ================== Email ==================
+# ================== Email ==================
 @auth_bp.route("/login/email/otp", methods=["POST"])
 def request_email_otp():
     """
     Gửi OTP về email để xác thực.
+    - Input JSON: { "email": "..." }
+    - Trả về: { success: true, message: string, code: int, data: {} } nếu gửi OTP thành công
     """
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     email = data.get("email")
 
     if not email:
-        return jsonify({"success": False, "error": "Email required"}), HttpCode.bad_request
+        return jsonify(
+            response_error(
+                message="Email required",
+                code=HttpCode.bad_request,
+            )
+        ), HttpCode.bad_request
 
     result = LoginService.request_email_otp(email)
-    status = HttpCode.success if "message" in result else HttpCode.bad_request
-    return jsonify(result), status
+    if "error" in result:
+        return jsonify(
+            response_error(
+                message=result["error"],
+                code=HttpCode.bad_request,
+            )
+        ), HttpCode.bad_request
 
+    return jsonify(
+        response_success(
+            message=result.get("message", "OTP sent successfully"),
+            code=HttpCode.success
+        )
+    ), HttpCode.success
 
 @auth_bp.route("/login/email", methods=["POST"])
 def login_email():
     """
     Đăng nhập bằng email + password + (OTP nếu có).
+    - Input JSON: { "email": "...", "password": "...", "otp_code": "..." (optional) }
+    - Trả về: { success: true, message: string, code: int, data: { session_id, user, access_token, refresh_token, expires_in } } nếu thành công
     """
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     email = data.get("email")
     password = data.get("password")
     otp_code = data.get("otp_code")
 
     if not email or not password:
-        return jsonify({"success": False, "error": "Email and password required"}), HttpCode.bad_request
+        return jsonify(
+            response_error(
+                message="Email and password required",
+                code=HttpCode.bad_request,
+            )
+        ), HttpCode.bad_request
 
     result = LoginService.login_with_email(email, password, otp_code)
-    status = HttpCode.success if result.get("success") else HttpCode.unauthorized
-    return jsonify(result), status
+    if "error" in result:
+        return jsonify(
+            response_error(
+                message=result["error"],
+                code=HttpCode.unauthorized,
+            )
+        ), HttpCode.unauthorized
 
+    return jsonify(
+        response_success(
+            data={
+                "session_id": result["session_id"],
+                "user": result["user"],
+                "access_token": result["access_token"],
+                "refresh_token": result["refresh_token"],
+                "expires_in": result["expires_in"]
+            },
+            message="Login successful",
+            code=HttpCode.success
+        )
+    ), HttpCode.success
 
-## ================== Refresh Token ==================
+# ================== Refresh Token ==================
 @auth_bp.route("/refresh", methods=["POST"])
 def refresh_token():
     """
     Cấp lại access_token mới bằng refresh_token.
     - Input JSON: { "refresh_token": "..." }
-    - Trả về: { access_token, user } nếu refresh_token hợp lệ
-    - Lỗi: 400 nếu thiếu dữ liệu, 401 nếu refresh_token không hợp lệ/hết hạn
+    - Trả về: { success: true, message: string, code: int, data: { access_token, expires_in } } nếu thành công
     """
-    data = request.get_json() or {}
+    data = request.get_json(silent=True) or {}
     refresh_token = data.get("refresh_token")
 
     if not refresh_token:
-        return jsonify({"error": "Refresh token required"}), HttpCode.bad_request
+        return jsonify(
+            response_error(
+                message="Refresh token required",
+                code=HttpCode.bad_request,
+            )
+        ), HttpCode.bad_request
 
     result = LoginService.refresh_access_token(refresh_token)
-    status = HttpCode.success if "access_token" in result else HttpCode.unauthorized
-    return jsonify(result), status
+    if "error" in result:
+        return jsonify(
+            response_error(
+                message=result["error"],
+                code=HttpCode.unauthorized,
+            )
+        ), HttpCode.unauthorized
+
+    return jsonify(
+        response_success(
+            data={
+                "access_token": result["access_token"],
+                "expires_in": timedelta(minutes=15).total_seconds()
+            },
+            message="Token refreshed successfully",
+            code=HttpCode.success
+        )
+    ), HttpCode.success
 
 
 ## ================== Logout ==================
@@ -128,13 +264,28 @@ def logout():
     session_id = data.get("session_id")
 
     if not session_id:
-        return jsonify({"success": False, "error": "Session ID required"}), HttpCode.bad_request
+        return jsonify(
+            response_error(
+                message="Session ID required",
+                code=HttpCode.bad_request,
+            )
+        ), HttpCode.bad_request
 
     success = SessionService.revoke_session(session_id)
     if not success:
-        return jsonify({"success": False, "error": "Invalid or expired session"}), HttpCode.unauthorized
+        return jsonify(
+            response_error(
+                message="Invalid or expired session",
+                code=HttpCode.unauthorized,
+            )
+        ), HttpCode.unauthorized
 
-    return jsonify({"success": True, "message": "Logged out successfully"}), HttpCode.success
+    return jsonify(
+        response_success(
+            message="Logged out successfully",
+            code=HttpCode.success
+        )
+    ), HttpCode.success
 
 ## ================== Me (Current User) ==================
 @auth_bp.route("/me", methods=["GET"])
@@ -148,10 +299,10 @@ def get_current_user():
     session_id = data.get("session_id") or request.headers.get("X-Session-Id")
 
     if not session_id:
-        return jsonify({"success": False, "error": "Session ID required"}), HttpCode.bad_request
+        return jsonify(response_error(message="Session ID required", code=HttpCode.bad_request)), HttpCode.bad_request
 
     result = UserService.get_user_by_session(session_id)
-    status = HttpCode.success if result.get("success") else HttpCode.unauthorized
+    status = result.get("code", HttpCode.unauthorized)
     return jsonify(result), status
 
 
@@ -160,16 +311,19 @@ def get_current_user():
 def register_username():
     """
     Đăng ký bằng username + password.
+    - Input JSON: { "username": "...", "password": "..." }
+    - Trả về: { success: true, message: string, code: int, data: { user } } nếu thành công
     """
     data = request.get_json() or {}
     username = data.get("username")
     password = data.get("password")
 
     if not username or not password:
-        return jsonify({"success": False, "error": "Username and password required"}), HttpCode.bad_request
+        result = response_error("Username and password required", code=HttpCode.bad_request)
+        return jsonify(result), result["error"]["code"]
 
     result = RegisterService.register_with_username(username, password)
-    status = HttpCode.success if "user" in result else HttpCode.bad_request
+    status = result.get("code", HttpCode.bad_request)
     return jsonify(result), status
 
 
@@ -177,6 +331,8 @@ def register_username():
 def register_email():
     """
     Đăng ký bằng email + password + OTP.
+    - Input JSON: { "email": "...", "password": "...", "otp_code": "..." }
+    - Trả về: { success: true, message: string, code: int, data: { user } } nếu thành công
     """
     data = request.get_json() or {}
     email = data.get("email")
@@ -184,10 +340,11 @@ def register_email():
     otp_code = data.get("otp_code")
 
     if not email or not password or not otp_code:
-        return jsonify({"success": False, "error": "Email, password and OTP required"}), HttpCode.bad_request
+        result = response_error("Email, password and OTP required", code=HttpCode.bad_request)
+        return jsonify(result), result["error"]["code"]
 
     result = RegisterService.register_with_email(email, password, otp_code)
-    status = HttpCode.success if "user" in result else HttpCode.bad_request
+    status = result.get("code", HttpCode.bad_request)
     return jsonify(result), status
 
 
@@ -195,14 +352,17 @@ def register_email():
 def register_phone():
     """
     Đăng ký bằng số điện thoại + OTP.
+    - Input JSON: { "phone": "...", "otp_code": "..." }
+    - Trả về: { success: true, message: string, code: int, data: { user } } nếu thành công
     """
     data = request.get_json() or {}
     phone = data.get("phone")
     otp_code = data.get("otp_code")
 
     if not phone or not otp_code:
-        return jsonify({"success": False, "error": "Phone and OTP required"}), HttpCode.bad_request
+        result = response_error("Phone and OTP required", code=HttpCode.bad_request)
+        return jsonify(result), result["error"]["code"]
 
     result = RegisterService.register_with_phone(phone, otp_code)
-    status = HttpCode.success if "user" in result else HttpCode.bad_request
+    status = result.get("code", HttpCode.bad_request)
     return jsonify(result), status

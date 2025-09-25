@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from models.auth_otp import AuthOTP
 from models.user import User
 from database import db
@@ -21,7 +21,7 @@ class OTPService:
             phone=phone,
             otp_code=otp_code,
             purpose=purpose,
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=5)
+            expires_at=datetime.now() + timedelta(minutes=5)
         )
         db.session.add(otp)
         db.session.commit()
@@ -38,7 +38,7 @@ class OTPService:
         otp = AuthOTP.query.filter_by(phone=phone, otp_code=otp_code, used=False, purpose=purpose).first()
         if not otp:
             return {"error": "OTP not found or already used"}
-        if otp.expires_at < datetime.now(timezone.utc):
+        if otp.expires_at < datetime.now():
             return {"error": "OTP expired"}
 
         user = User.query.filter_by(phone=phone).first()
@@ -70,7 +70,7 @@ class OTPService:
             email=email,
             otp_code=otp_code,
             purpose=purpose,
-            expires_at=datetime.now(timezone.utc) + timedelta(minutes=5)
+            expires_at=datetime.now() + timedelta(minutes=5)
         )
         db.session.add(otp)
         db.session.commit()
@@ -89,7 +89,7 @@ class OTPService:
 
         if otp_code:
             otp = AuthOTP.query.filter_by(otp_code=otp_code, email=email, used=False, purpose=purpose).first()
-            if not otp or otp.expires_at < datetime.now(timezone.utc):
+            if not otp or otp.expires_at < datetime.now():
                 return {"error": "Invalid or expired verification code"}
             otp.used = True
             db.session.commit()

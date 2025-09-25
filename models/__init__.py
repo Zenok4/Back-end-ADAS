@@ -1,5 +1,5 @@
 from database import db, get_db_url
-from models import user, auth_otp, sessions
+from models import user, auth_otp, sessions, permission, role, role_permission, user_role
 from flask import Flask
 
 def init_dtb(app: Flask):

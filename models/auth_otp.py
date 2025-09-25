@@ -1,5 +1,5 @@
 from database import db
-from datetime import datetime, timezone
+from datetime import datetime
 
 class AuthOTP(db.Model):
     __tablename__ = "auth_otps"
@@ -11,5 +11,5 @@ class AuthOTP(db.Model):
     purpose = db.Column(db.Enum('login', 'verify', 'reset'), default='login')
     expires_at = db.Column(db.DateTime, nullable=False)
     used = db.Column(db.Boolean, default=False)
-    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(), onupdate=datetime.now())
     created_at = db.Column(db.DateTime, default=datetime.now())

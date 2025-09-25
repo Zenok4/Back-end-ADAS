@@ -7,11 +7,11 @@ from services.authen.register import RegisterService
 from type.http_constants import HttpCode
 from helper.normalization_response import response_error, response_success
 
-auth_bp = Blueprint("auth", __name__)
+authen_bp = Blueprint("authen_bp", __name__)
 
 
 ## ================== Username/Password ==================
-@auth_bp.route("/login/username", methods=["POST"])
+@authen_bp.route("/login/username", methods=["POST"])
 def login_username():
     """
     Đăng nhập bằng username + password.
@@ -57,7 +57,7 @@ def login_username():
 
 
 # ================== Phone OTP ==================
-@auth_bp.route("/login/phone/otp", methods=["POST"])
+@authen_bp.route("/login/phone/otp", methods=["POST"])
 def request_phone_otp():
     """
     Gửi OTP về số điện thoại để đăng nhập.
@@ -92,7 +92,7 @@ def request_phone_otp():
         )
     ), HttpCode.success
 
-@auth_bp.route("/login/phone/verify", methods=["POST"])
+@authen_bp.route("/login/phone/verify", methods=["POST"])
 def verify_phone_otp():
     """
     Xác thực OTP để đăng nhập bằng số điện thoại.
@@ -135,7 +135,7 @@ def verify_phone_otp():
     ), HttpCode.success
 
 # ================== Email ==================
-@auth_bp.route("/login/email/otp", methods=["POST"])
+@authen_bp.route("/login/email/otp", methods=["POST"])
 def request_email_otp():
     """
     Gửi OTP về email để xác thực.
@@ -169,7 +169,7 @@ def request_email_otp():
         )
     ), HttpCode.success
 
-@auth_bp.route("/login/email", methods=["POST"])
+@authen_bp.route("/login/email", methods=["POST"])
 def login_email():
     """
     Đăng nhập bằng email + password + (OTP nếu có).
@@ -213,7 +213,7 @@ def login_email():
     ), HttpCode.success
 
 # ================== Refresh Token ==================
-@auth_bp.route("/refresh", methods=["POST"])
+@authen_bp.route("/refresh", methods=["POST"])
 def refresh_token():
     """
     Cấp lại access_token mới bằng refresh_token.
@@ -253,7 +253,7 @@ def refresh_token():
 
 
 ## ================== Logout ==================
-@auth_bp.route("/logout", methods=["POST"])
+@authen_bp.route("/logout", methods=["POST"])
 def logout():
     """
     Đăng xuất người dùng: thu hồi (revoke) session trong DB.
@@ -288,7 +288,7 @@ def logout():
     ), HttpCode.success
 
 ## ================== Me (Current User) ==================
-@auth_bp.route("/me", methods=["GET"])
+@authen_bp.route("/me", methods=["GET"])
 def get_current_user():
     """
     Lấy thông tin user hiện tại dựa trên session_id.
@@ -307,7 +307,7 @@ def get_current_user():
 
 
 ## ================== Register ==================
-@auth_bp.route("/register/username", methods=["POST"])
+@authen_bp.route("/register/username", methods=["POST"])
 def register_username():
     """
     Đăng ký bằng username + password.
@@ -327,7 +327,7 @@ def register_username():
     return jsonify(result), status
 
 
-@auth_bp.route("/register/email", methods=["POST"])
+@authen_bp.route("/register/email", methods=["POST"])
 def register_email():
     """
     Đăng ký bằng email + password + OTP.
@@ -348,7 +348,7 @@ def register_email():
     return jsonify(result), status
 
 
-@auth_bp.route("/register/phone", methods=["POST"])
+@authen_bp.route("/register/phone", methods=["POST"])
 def register_phone():
     """
     Đăng ký bằng số điện thoại + OTP.

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from models.user import User
 from models.sessions import UserSession
 from helper.normalization_response import response_success, response_error
@@ -32,7 +32,7 @@ class UserService:
         if expires_at and not expires_at.tzinfo:  # Kiểm tra nếu expires_at là naive
             expires_at = expires_at.replace(tzinfo=UTC)  # Thêm múi giờ UTC
 
-        if expires_at and expires_at < datetime.now(timezone.utc):
+        if expires_at and expires_at < datetime.now():
             return response_error(message="Session expired", code=HttpCode.unauthorized)
 
         user = User.query.get(session.user_id)

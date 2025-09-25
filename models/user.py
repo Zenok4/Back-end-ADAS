@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from database import db
 
 class User(db.Model):
@@ -11,8 +11,8 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     display_name = db.Column(db.String(255))
     is_active = db.Column(db.Boolean, nullable=False, default=True)
-    updated_at = db.Column(db.DateTime, default=datetime.now(timezone.utc), onupdate=datetime.now(timezone.utc))
-    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=datetime.now(), onupdate=datetime.now())
+    created_at = db.Column(db.DateTime, default=datetime.now())
 
     def to_dict(self):
         return {

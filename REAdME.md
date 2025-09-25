@@ -59,7 +59,7 @@ pip freeze > requirements.txt
 ```
 
 
-**Generated:** 2025-09-22 15:52:11
+**Generated:** 2025-09-25 19:33:16
 
 ## 📂 Cấu trúc thư mục
 
@@ -89,22 +89,38 @@ backend/
 
 ## 🌐 API Endpoints
 
-_12 endpoint(s) found._
+_28 endpoint(s) found._
 
 | Method(s) | Path | Function | File | Description |
 |-----------|------|----------|------|-------------|
+| POST | `/login/email` | `login_email()` | `endpoints\authen_enpoints.py` | Đăng nhập bằng email + password + (OTP nếu có). |
+| POST | `/login/email/otp` | `request_email_otp()` | `endpoints\authen_enpoints.py` | Gửi OTP về email để xác thực. |
+| POST | `/login/phone/otp` | `request_phone_otp()` | `endpoints\authen_enpoints.py` | Gửi OTP về số điện thoại để đăng nhập. |
+| POST | `/login/phone/verify` | `verify_phone_otp()` | `endpoints\authen_enpoints.py` | Xác thực OTP để đăng nhập bằng số điện thoại. |
+| POST | `/login/username` | `login_username()` | `endpoints\authen_enpoints.py` | Đăng nhập bằng username + password. |
+| POST | `/logout` | `logout()` | `endpoints\authen_enpoints.py` | Đăng xuất người dùng: thu hồi (revoke) session trong DB. |
+| GET | `/me` | `get_current_user()` | `endpoints\authen_enpoints.py` | Lấy thông tin user hiện tại dựa trên session_id. |
+| DELETE | `/permissions/<int:perm_id>/delete` | `delete_permission()` | `endpoints\author_enpoints.py` | Xóa permission. |
+| GET | `/permissions/<int:perm_id>/get` | `get_permission()` | `endpoints\author_enpoints.py` | Lấy chi tiết 1 permission. |
+| PUT | `/permissions/<int:perm_id>/update` | `update_permission()` | `endpoints\author_enpoints.py` | Cập nhật permission. |
+| POST | `/permissions/create` | `create_permission()` | `endpoints\author_enpoints.py` | Tạo permission mới. |
+| GET | `/permissions/list` | `list_permissions()` | `endpoints\author_enpoints.py` | Lấy danh sách tất cả permissions. |
+| POST | `/refresh` | `refresh_token()` | `endpoints\authen_enpoints.py` | Cấp lại access_token mới bằng refresh_token. |
+| POST | `/register/email` | `register_email()` | `endpoints\authen_enpoints.py` | Đăng ký bằng email + password + OTP. |
+| POST | `/register/phone` | `register_phone()` | `endpoints\authen_enpoints.py` | Đăng ký bằng số điện thoại + OTP. |
+| POST | `/register/username` | `register_username()` | `endpoints\authen_enpoints.py` | Đăng ký bằng username + password. |
+| DELETE | `/roles/<int:role_id>/delete` | `delete_role()` | `endpoints\author_enpoints.py` | Xóa role. |
+| GET | `/roles/<int:role_id>/get` | `get_role()` | `endpoints\author_enpoints.py` | Lấy thông tin chi tiết 1 role. |
+| POST | `/roles/<int:role_id>/permissions/<int:perm_id>/assign` | `assign_permission_to_role()` | `endpoints\author_enpoints.py` | Gán permission cho role. |
+| DELETE | `/roles/<int:role_id>/permissions/<int:perm_id>/remove` | `remove_permission_from_role()` | `endpoints\author_enpoints.py` | Gỡ permission khỏi role. |
+| GET | `/roles/<int:role_id>/permissions/list` | `list_role_permissions()` | `endpoints\author_enpoints.py` | Lấy danh sách permissions của 1 role. |
+| PUT | `/roles/<int:role_id>/update` | `update_role()` | `endpoints\author_enpoints.py` | Cập nhật role. |
+| POST | `/roles/create` | `create_role()` | `endpoints\author_enpoints.py` | Tạo role mới. |
+| GET | `/roles/list` | `list_roles()` | `endpoints\author_enpoints.py` | Lấy danh sách tất cả roles. |
 | GET | `/test-connection` | `test_connection_api()` | `app.py` | Kiểm tra kết nối giữa server và database |
-| POST | `/login/username` | `login_username()` | `endpoints\auth_enpoints.py` | Đăng nhập bằng username + password. |
-| POST | `/login/phone/otp` | `request_phone_otp()` | `endpoints\auth_enpoints.py` | Gửi OTP về số điện thoại để đăng nhập. |
-| POST | `/login/phone/verify` | `verify_phone_otp()` | `endpoints\auth_enpoints.py` | Xác thực OTP để đăng nhập bằng số điện thoại. |
-| POST | `/login/email/otp` | `request_email_otp()` | `endpoints\auth_enpoints.py` | Gửi OTP về email để xác thực. |
-| POST | `/login/email` | `login_email()` | `endpoints\auth_enpoints.py` | Đăng nhập bằng email + password + (OTP nếu có). |
-| POST | `/refresh` | `refresh_token()` | `endpoints\auth_enpoints.py` | Cấp lại access_token mới bằng refresh_token. |
-| POST | `/logout` | `logout()` | `endpoints\auth_enpoints.py` | Đăng xuất người dùng: thu hồi (revoke) session trong DB. |
-| GET | `/me` | `get_current_user()` | `endpoints\auth_enpoints.py` | Lấy thông tin user hiện tại dựa trên session_id. |
-| POST | `/register/username` | `register_username()` | `endpoints\auth_enpoints.py` | Đăng ký bằng username + password. |
-| POST | `/register/email` | `register_email()` | `endpoints\auth_enpoints.py` | Đăng ký bằng email + password + OTP. |
-| POST | `/register/phone` | `register_phone()` | `endpoints\auth_enpoints.py` | Đăng ký bằng số điện thoại + OTP. |
+| GET | `/users/<int:user_id>/permissions/list` | `get_user_permissions()` | `endpoints\author_enpoints.py` | Lấy danh sách permissions của 1 user (từ roles của user). |
+| POST | `/users/<int:user_id>/roles/<int:role_id>/assign` | `assign_role_to_user()` | `endpoints\author_enpoints.py` | Gán role cho user. |
+| GET | `/users/<int:user_id>/roles/list` | `get_user_roles()` | `endpoints\author_enpoints.py` | Lấy danh sách roles của 1 user. |
 
 ---
 

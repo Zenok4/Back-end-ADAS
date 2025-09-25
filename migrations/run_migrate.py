@@ -32,9 +32,17 @@ def run_migrations(app, drop=False):
         else:
             result = migrate(app)
 
-        # Kiểm tra xem có thay đổi nào không
-        if result and any(value for value in result.values() if isinstance(value, list)):
-            changed = True
+        if result:
+            # Chuẩn hóa thành list để kiểm tra
+            if isinstance(result, dict):
+                values = result.values()
+            elif isinstance(result, list):
+                values = result
+            else:
+                values = [result]
+
+            if any(isinstance(value, list) and value for value in values):
+                changed = True
 
     if not changed:
         print("ℹ️ Database schema is up to date")

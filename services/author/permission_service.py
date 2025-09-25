@@ -10,6 +10,7 @@ class PermissionService:
     @staticmethod
     def list_permissions():
         perms = Permission.query.all()
+        print(">>> perms:", perms)  
         return response_success([p.to_dict() for p in perms], key="permissions")
 
     @staticmethod
@@ -93,3 +94,32 @@ class PermissionService:
             .all()
         )
         return response_success([r.to_dict() for r in rows], key="permissions")
+    
+    @staticmethod
+    def assign_role_to_user(user_id: int, role_id: int):
+        """
+        Gán role cho user (thêm bản ghi vào bảng user_roles).
+        """
+        try:
+            # Kiểm tra role tồn tại
+            role = Role.query.get(role_id)
+            if not role:
+                return response_error("Role not found", HttpCode.not_found)
+
+            # Kiểm tra đã tồn tại binding chưa
+            exists = UserRole.query.filter_by(user_id=user_id, role_id=role_id).first()
+            if exists:
+                return response_error("User already has this role", HttpCode.conflict)
+
+            binding = UserRole(user_id=user_id, role_id=role_id)
+            db.session.add(binding)
+            db.session.commit()
+
+            return response_success(
+                {"user_id": user_id, "role_id": role_id},
+                message="Role assigned to user",
+                code=HttpCode.created,
+            )
+        except Exception as e:
+            db.session.rollback()
+            return response_error(f"Assign role failed: {str(e)}", HttpCode.internal_server_error)

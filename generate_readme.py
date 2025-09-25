@@ -5,6 +5,7 @@
 import ast
 import datetime
 import argparse
+import re  # Thêm import re để hỗ trợ natural sort
 from pathlib import Path
 from typing import Optional, List, Tuple, Dict, Any
 
@@ -22,6 +23,9 @@ HTTP_DECORATOR_METHODS = {
     "route": None,  # route sẽ đọc kwargs 'methods'
 }
 
+def natural_sort_key(s: str) -> list:
+    """Hàm hỗ trợ sắp xếp tự nhiên cho path."""
+    return [int(c) if c.isdigit() else c.lower() for c in re.split(r'(\d+)', s)]
 
 def get_literal_str(node) -> Optional[str]:
     if isinstance(node, ast.Constant) and isinstance(node.value, str):
@@ -29,7 +33,6 @@ def get_literal_str(node) -> Optional[str]:
     if hasattr(ast, "Str") and isinstance(node, ast.Str):
         return node.s
     return None
-
 
 def extract_methods_from_value(node) -> List[str]:
     if node is None:
@@ -45,7 +48,6 @@ def extract_methods_from_value(node) -> List[str]:
         if s:
             methods.append(s.upper())
     return methods
-
 
 def parse_decorator(dec: ast.AST) -> Optional[Tuple[Optional[str], List[str], Optional[str]]]:
     if not isinstance(dec, ast.Call):
@@ -71,7 +73,6 @@ def parse_decorator(dec: ast.AST) -> Optional[Tuple[Optional[str], List[str], Op
                 methods = HTTP_DECORATOR_METHODS.get(attr) or []
             return path, methods, owner
     return None
-
 
 def parse_file_for_endpoints(pyfile: Path) -> List[Dict[str, Any]]:
     endpoints = []
@@ -106,7 +107,6 @@ def parse_file_for_endpoints(pyfile: Path) -> List[Dict[str, Any]]:
                 })
     return endpoints
 
-
 def build_tree(folder: Path) -> List[str]:
     lines = []
     try:
@@ -122,7 +122,6 @@ def build_tree(folder: Path) -> List[str]:
         else:
             lines.append(f"{connector}📄 {p.name}")
     return lines
-
 
 def generate_readme(structure_only=False, endpoints_only=False):
     now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -203,6 +202,11 @@ pip freeze > requirements.txt
             endpoints_all.extend(parse_file_for_endpoints(py))
 
     if endpoints_all:
+        # Sắp xếp endpoints theo path (natural sort)
+        endpoints_all = sorted(
+            endpoints_all,
+            key=lambda ep: natural_sort_key(ep["routes"][0]["path"])
+        )
         table_lines = [
             "| Method(s) | Path | Function | File | Description |",
             "|-----------|------|----------|------|-------------|"
@@ -234,7 +238,6 @@ pip freeze > requirements.txt
     OUT.write_text("\n".join(readme_parts), encoding="utf-8")
     print(f"✅ README.md created/updated at {OUT}")
     print(f" - Endpoints found: {len(endpoints_all)}")
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate API.md with structure + endpoints")

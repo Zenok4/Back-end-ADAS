@@ -1,6 +1,6 @@
 import uuid
 import hashlib
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from database import db
 from models.sessions import UserSession
@@ -31,8 +31,8 @@ class SessionService:
             user_id=user_id,
             session_id=session_id,
             token_hash=refresh_token_hash,
-            issued_at=datetime.now(timezone.utc),
-            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+            issued_at=datetime.now(),
+            expires_at=datetime.now() + timedelta(days=7),
             revoked=False
         )
 
@@ -54,7 +54,7 @@ class SessionService:
 
         if not session:
             return False
-        if session.expires_at and session.expires_at < datetime.now(timezone.utc):
+        if session.expires_at and session.expires_at < datetime.now():
             return False
 
         return True

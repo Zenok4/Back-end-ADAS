@@ -8,7 +8,8 @@ from werkzeug.exceptions import HTTPException
 from type.http_constants import HttpCode
 from config import JWT_SECRET_KEY
 from database import get_mysql_connection
-from endpoints.auth_enpoints import auth_bp
+from endpoints.authen_enpoints import authen_bp
+from endpoints.author_enpoints import author_bp
 from models import init_dtb
 
 app = Flask(__name__)
@@ -19,7 +20,8 @@ jwt = JWTManager(app)
 CORS(app, supports_credentials=True)
 
 # ========== Đăng ký các blueprint ==========
-app.register_blueprint(auth_bp, url_prefix="/auth")
+app.register_blueprint(authen_bp, url_prefix="/authen")
+app.register_blueprint(author_bp, url_prefix="/author")
 
 
 # ========== TEST Connection ==========

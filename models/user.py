@@ -1,5 +1,7 @@
 from datetime import datetime
 from database import db
+from sqlalchemy import event
+from models.user_role import UserRole 
 
 class User(db.Model):
     __tablename__ = "users"
@@ -22,3 +24,10 @@ class User(db.Model):
             "phone": self.phone,
             "display_name": self.display_name
         }
+
+@event.listens_for(User, 'after_insert')
+def assign_default_role(mapper, connection, target):
+    default_role_id = 1
+    connection.execute(
+        db.insert(UserRole.__table__).values(user_id=target.id, role_id=default_role_id)
+    )

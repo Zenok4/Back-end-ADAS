@@ -1,33 +1,22 @@
 from database import db
 from datetime import datetime
 
-class Role(db.Model):
-    __tablename__ = "roles"
+class PermissionGroup(db.Model):
+    __tablename__ = "permission_groups"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.String(255))
-    level = db.Column(db.Integer, nullable=False, default=1)
     updated_at = db.Column(db.DateTime, default=datetime.now(), onupdate=datetime.now())
     created_at = db.Column(db.DateTime, default=datetime.now())
 
-    permissions = db.relationship(
-        "Permission",
-        secondary="role_permissions",
-        back_populates="roles"
-    )
-    pages = db.relationship( 
-        "Page",
-        secondary="role_pages",
-        back_populates="roles"
-    )
+    permissions = db.relationship("Permission", back_populates="group")
 
     def to_dict(self):
         return {
             "id": self.id,
             "name": self.name,
             "description": self.description,
-            "level": self.level,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

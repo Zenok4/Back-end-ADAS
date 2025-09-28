@@ -1,5 +1,7 @@
 from database import db, get_db_url
 from models import user, auth_otp, sessions, permission, role, role_permission, user_role
+from models import permission_group, page, role_page, media, detection_event, drowsiness_event  
+from models import lane_event, object_detection, sign_detection, notification, audit_log  
 from flask import Flask
 
 def init_dtb(app: Flask):

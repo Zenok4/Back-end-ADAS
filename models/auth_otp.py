@@ -13,3 +13,7 @@ class AuthOTP(db.Model):
     used = db.Column(db.Boolean, default=False)
     updated_at = db.Column(db.DateTime, default=datetime.now(), onupdate=datetime.now())
     created_at = db.Column(db.DateTime, default=datetime.now())
+
+    __table_args__ = (
+        db.CheckConstraint('expires_at > created_at', name='check_expires_at'),
+    )

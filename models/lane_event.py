@@ -16,5 +16,5 @@ class LaneEvent(db.Model):
 
     __table_args__ = (
         db.CheckConstraint('deviation_meters >= 0', name='check_deviation_meters'),
-        db.CheckConstraint('confidence >= 0 AND confidence <= 1', name='check_confidence'),
+        db.CheckConstraint('confidence >= 0 AND confidence <= 1', name='check_lane_confidence'),
     )

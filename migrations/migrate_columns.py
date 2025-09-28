@@ -14,6 +14,20 @@ def types_equal(existing_type, new_type, table_name, column_name):
     if existing_lower.startswith("tinyint") and new_lower in ("bool", "boolean"):
         return True
 
+    # DECIMAL và NUMERIC coi như giống nhau
+    if (existing_lower.startswith("decimal") and new_lower.startswith("numeric")) \
+        or (existing_lower.startswith("numeric") and new_lower.startswith("decimal")):
+        # So sánh precision, scale nếu có
+        import re
+        def parse_ps(s):
+            m = re.search(r"\((\d+),(\d+)\)", s)
+            if m:
+                return int(m[1]), int(m[2])
+            return None
+        existing_ps = parse_ps(existing_lower)
+        new_ps = parse_ps(new_lower)
+        return existing_ps == new_ps
+    
     # ENUM
     if existing_lower.startswith("enum") and new_lower.startswith("enum"):
         # Lấy danh sách giá trị ENUM từ information_schema

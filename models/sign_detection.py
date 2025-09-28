@@ -14,5 +14,5 @@ class SignDetection(db.Model):
     detection_event = db.relationship("DetectionEvent", backref="sign_detections")
 
     __table_args__ = (
-        db.CheckConstraint('confidence >= 0 AND confidence <= 1', name='check_confidence'),
+        db.CheckConstraint('confidence >= 0 AND confidence <= 1', name='check_signs_confidence'),
     )

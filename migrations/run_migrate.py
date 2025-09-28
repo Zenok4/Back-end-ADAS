@@ -52,7 +52,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--drop",
         action="store_true",
-        help="Drop columns that exist in DB but not in models"
+        help="Drop objects (tables/columns) that exist in DB but not in models"
     )
     args = parser.parse_args()
 

@@ -17,5 +17,5 @@ class DrowsinessEvent(db.Model):
 
     __table_args__ = (
         db.CheckConstraint('eye_closure_duration_ms >= 0', name='check_eye_closure_duration_ms'),
-        db.CheckConstraint('confidence >= 0 AND confidence <= 1', name='check_confidence'),
+        db.CheckConstraint('confidence >= 0 AND confidence <= 1', name='check_eye_confidence'),
     )

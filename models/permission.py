@@ -8,7 +8,6 @@ class Permission(db.Model):
     code = db.Column(db.String(100), unique=True, nullable=False)   
     title = db.Column(db.String(100), nullable=False)              
     description = db.Column(db.String(255))
-    group_id = db.Column(db.Integer, db.ForeignKey("permission_groups.id", ondelete="SET NULL"), nullable=True)
     updated_at = db.Column(db.DateTime, default=datetime.now(), onupdate=datetime.now())
     created_at = db.Column(db.DateTime, default=datetime.now())
 
@@ -17,7 +16,6 @@ class Permission(db.Model):
         secondary="role_permissions",
         back_populates="permissions"
     )
-    group = db.relationship("PermissionGroup", back_populates="permissions")  
 
     def to_dict(self):
         return {
@@ -25,7 +23,6 @@ class Permission(db.Model):
             "code": self.code,
             "title": self.title,
             "description": self.description,
-            "group_id": self.group_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

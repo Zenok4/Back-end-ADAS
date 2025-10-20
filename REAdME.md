@@ -15,12 +15,12 @@ Kích hoạt môi trường ảo bằng một trong hai lệnh sau:
 
 - Lệnh 1:
   ```bash
-  libs\Scripts\activate
+  libs/Scripts/activate
   ```
 
 - Lệnh 2 (nếu lệnh trên không hoạt động):
   ```bash
-  source libs\Scripts\activate
+  source libs/Scripts/activate
   ```
 
 ## 3. Cài đặt thư viện cần thiết
@@ -59,7 +59,7 @@ pip freeze > requirements.txt
 ```
 
 
-**Generated:** 2025-09-25 19:33:16
+**Generated:** 2025-10-20 15:24:45
 
 ## 📂 Cấu trúc thư mục
 
@@ -79,8 +79,10 @@ backend/
 ├── 📄 .env
 ├── 📄 .gitignore
 ├── 📄 app.py
+├── 📄 CHANGELOG.md
 ├── 📄 config.py
 ├── 📄 database.py
+├── 📄 generate_change_log.py
 ├── 📄 generate_readme.py
 ├── 📄 logger.py
 ├── 📄 README.md

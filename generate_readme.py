@@ -144,12 +144,12 @@ Kích hoạt môi trường ảo bằng một trong hai lệnh sau:
 
 - Lệnh 1:
   ```bash
-  libs\\Scripts\\activate
+  libs/Scripts/activate
   ```
 
 - Lệnh 2 (nếu lệnh trên không hoạt động):
   ```bash
-  source libs\\Scripts\\activate
+  source libs/Scripts/activate
   ```
 
 ## 3. Cài đặt thư viện cần thiết

@@ -11,6 +11,8 @@ class RoleService:
     def list_roles():
         try:
             roles = Role.query.all()
+            if( not roles):
+                return response_error("Not found any roles", HttpCode.no_content)
             return response_success([r.to_dict() for r in roles], key="roles")
         except Exception as e:
             return response_error(f"Failed to list roles: {str(e)}", HttpCode.internal_server_error)

@@ -75,13 +75,37 @@ def parse_decorator(dec: ast.AST) -> Optional[Tuple[Optional[str], List[str], Op
     return None
 
 def parse_file_for_endpoints(pyfile: Path) -> List[Dict[str, Any]]:
+    """
+    Phát hiện endpoints và tự động nối url_prefix nếu có Blueprint.
+    """
     endpoints = []
+    blueprint_prefixes = {}
+
     try:
         src = pyfile.read_text(encoding="utf-8")
         tree = ast.parse(src)
     except Exception:
         return endpoints
 
+    # 🔍 B1. Tìm các Blueprint có url_prefix
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            # ví dụ: user_bp = Blueprint("user", __name__, url_prefix="/api/user")
+            if isinstance(node.value, ast.Call):
+                func = node.value.func
+                if isinstance(func, ast.Name) and func.id == "Blueprint":
+                    name = None
+                    url_prefix = ""
+                    for t in node.targets:
+                        if isinstance(t, ast.Name):
+                            name = t.id
+                    for kw in node.value.keywords:
+                        if kw.arg == "url_prefix":
+                            url_prefix = get_literal_str(kw.value) or ""
+                    if name:
+                        blueprint_prefixes[name] = url_prefix
+
+    # 🔍 B2. Tìm các hàm có decorator là route
     for node in ast.walk(tree):
         if isinstance(node, ast.FunctionDef):
             found_routes = []
@@ -91,11 +115,23 @@ def parse_file_for_endpoints(pyfile: Path) -> List[Dict[str, Any]]:
                     path, methods, owner = res
                     if not methods:
                         methods = ["GET"]
+
+                    # ⚙️ Nối url_prefix nếu có
+                    if owner in blueprint_prefixes:
+                        prefix = blueprint_prefixes[owner]
+                        if prefix and path and not path.startswith(prefix):
+                            full_path = prefix.rstrip("/") + "/" + path.lstrip("/")
+                        else:
+                            full_path = path
+                    else:
+                        full_path = path
+
                     found_routes.append({
-                        "path": path or "(unknown)",
+                        "path": full_path or "(unknown)",
                         "methods": methods,
                         "owner": owner or "",
                     })
+
             if found_routes:
                 doc = ast.get_docstring(node) or ""
                 short_doc = doc.splitlines()[0].strip() if doc else ""

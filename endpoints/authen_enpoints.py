@@ -7,7 +7,7 @@ from services.authen.register import RegisterService
 from type.http_constants import HttpCode
 from helper.normalization_response import response_error, response_success
 
-authen_bp = Blueprint("authen_bp", __name__)
+authen_bp = Blueprint("authen_bp", __name__, url_prefix="/authen")
 
 
 ## ================== Username/Password ==================

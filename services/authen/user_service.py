@@ -1,44 +1,153 @@
-from datetime import datetime
 from models.user import User
-from models.sessions import UserSession
-from helper.normalization_response import response_success, response_error
-from pytz import UTC
-from type.http_constants import HttpCode
+from sqlalchemy.exc import SQLAlchemyError
+from database import db
 
 class UserService:
+    """
+    Service xử lý toàn bộ nghiệp vụ liên quan đến người dùng.
+    Bao gồm: CRUD, tìm kiếm, phân trang.
+    """
+
+    # ================== GET ALL ==================
     @staticmethod
-    def get_user_by_session(session_id: str):
-        """
-        Lấy thông tin user dựa trên session_id.
-        - Kiểm tra session có hợp lệ không (tồn tại, chưa revoked, chưa hết hạn).
-        - Trả về dict thông tin user nếu ok, hoặc {error} nếu fail.
-        """
-        session = UserSession.query.filter_by(session_id=session_id).first()
+    def get_all_users(page=1, limit=20, keyword=""):
+        try:
+            query = User.query
 
-        if not session:
-            return response_error(
-                message="Session not found",
-                code=HttpCode.unauthorized
+            if keyword:
+                keyword_like = f"%{keyword}%"
+                query = query.filter(
+                    (User.username.ilike(keyword_like)) |
+                    (User.email.ilike(keyword_like)) |
+                    (User.phone.ilike(keyword_like))
+                )
+
+            total = query.count()
+            users = (
+                query.order_by(User.id.desc())
+                .offset((page - 1) * limit)
+                .limit(limit)
+                .all()
             )
 
-        if session.revoked:
-            return response_error(
-                message="Session revoked",
-                code=HttpCode.unauthorized,
+            user_list = [u.to_dict() for u in users]
+
+            return {
+                "data": {
+                    "users": user_list,
+                    "page": page,
+                    "limit": limit,
+                    "total": total,
+                }
+            }
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return {"error": f"Database error: {str(e)}"}
+
+
+    # ================== GET BY ID ==================
+    @staticmethod
+    def get_user_by_id(user_id):
+        try:
+            user = User.query.get(user_id)
+            if not user:
+                return None
+            return user.to_dict()
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return {"error": f"Database error: {str(e)}"}
+
+
+    # ================== CREATE ==================
+    @staticmethod
+    def create_user(data):
+        try:
+            required = ["username", "email", "phone", "password"]
+            if not all(data.get(f) for f in required):
+                return {"error": "Missing required fields"}
+
+            # Check tồn tại
+            if User.query.filter_by(username=data["username"]).first():
+                return {"error": "Username already exists"}
+            if User.query.filter_by(email=data["email"]).first():
+                return {"error": "Email already exists"}
+
+            new_user = User.create_user(
+                username=data["username"],
+                email=data["email"],
+                phone=data["phone"],
+                password=data["password"],
             )
 
-        # Đảm bảo session.expires_at là offset-aware
-        expires_at = session.expires_at
-        if expires_at and not expires_at.tzinfo:  # Kiểm tra nếu expires_at là naive
-            expires_at = expires_at.replace(tzinfo=UTC)  # Thêm múi giờ UTC
+            db.session.add(new_user)
+            db.session.commit()
 
-        if expires_at and expires_at < datetime.now():
-            return response_error(message="Session expired", code=HttpCode.unauthorized)
+            return {"data": new_user.to_dict()}
 
-        user = User.query.get(session.user_id)
-        if not user:
-            return response_error(message="User not found", code=HttpCode.not_found)
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return {"error": f"Database error: {str(e)}"}
+        except Exception as e:
+            return {"error": str(e)}
 
 
-        return response_success(data=user.to_dict(), key="user", message="Get infomation successfull", code=HttpCode.success)
-    
+    # ================== UPDATE ==================
+    @staticmethod
+    def update_user(user_id, data):
+        try:
+            user = User.query.get(user_id)
+            if not user:
+                return {"error": "User not found"}
+
+            for key in ["username", "email", "phone"]:
+                if key in data and data[key]:
+                    setattr(user, key, data[key])
+
+            db.session.commit()
+            return {"data": user.to_dict()}
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return {"error": f"Database error: {str(e)}"}
+        except Exception as e:
+            return {"error": str(e)}
+
+
+    # ================== DELETE ==================
+    @staticmethod
+    def delete_user(user_id):
+        try:
+            user = User.query.get(user_id)
+            if not user:
+                return {"error": "User not found", "success": False}
+
+            db.session.delete(user)
+            db.session.commit()
+            return {"success": True}
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return {"error": f"Database error: {str(e)}", "success": False}
+        except Exception as e:
+            return {"error": str(e), "success": False}
+
+    @staticmethod
+    def toggle_status(user_id, data):
+        """Kích hoạt / khóa tài khoản người dùng."""
+        try:
+            user = User.query.get(user_id)
+            if not user:
+                return {"error": "User not found"}
+
+            is_active = data.get("is_active")
+            if is_active is None:
+                return {"error": "Missing field 'is_active'"}
+
+            user.is_active = bool(is_active)
+            db.session.commit()
+
+            return {"data": user.to_dict()}
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return {"error": f"Database error: {str(e)}"}

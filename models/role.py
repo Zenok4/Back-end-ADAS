@@ -16,11 +16,6 @@ class Role(db.Model):
         secondary="role_permissions",
         back_populates="roles"
     )
-    pages = db.relationship( 
-        "Page",
-        secondary="role_pages",
-        back_populates="roles"
-    )
 
     def to_dict(self):
         return {

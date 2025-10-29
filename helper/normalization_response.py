@@ -11,8 +11,8 @@ def response_success(data: dict = "", key: str = "data", message = "", code: int
 def response_error(message: str, code: int = 400):
     return {
         "success": False,
+        "code": code,
         "error": {
             "message": message,
-            "code": code
         }
     }

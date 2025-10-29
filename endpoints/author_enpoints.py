@@ -5,7 +5,7 @@ from middlewares.error_handler import handle_exceptions
 from services.author.role_service import RoleService
 from services.author.permission_service import PermissionService
 from type.http_constants import HttpCode
-from helper.normalization_response import response_error, response_success
+from helper.normalization_response import response_error
 
 author_bp = Blueprint("author", __name__, url_prefix="/author")
 
@@ -17,7 +17,6 @@ author_bp = Blueprint("author", __name__, url_prefix="/author")
 
 # ================== ROLES ==================
 @author_bp.route("/users/<int:user_id>/roles/<int:role_id>/assign", methods=["POST"])
-@handle_exceptions
 def assign_role_to_user(user_id, role_id):
     """
     Gán role cho user.
@@ -29,7 +28,6 @@ def assign_role_to_user(user_id, role_id):
     return jsonify(result), result.get("code", HttpCode.success)
 
 @author_bp.route("/roles/list", methods=["GET"])
-@handle_exceptions
 def list_roles():
     """
     Lấy danh sách tất cả roles.
@@ -41,7 +39,6 @@ def list_roles():
     return jsonify(result), result.get("code", HttpCode.success)
 
 @author_bp.route("/roles/<int:role_id>/get", methods=["GET"])
-@handle_exceptions
 def get_role(role_id):
     """
     Lấy thông tin chi tiết 1 role.
@@ -54,7 +51,6 @@ def get_role(role_id):
 
 
 @author_bp.route("/roles/create", methods=["POST"])
-@handle_exceptions
 def create_role():
     """
     Tạo role mới.
@@ -77,7 +73,6 @@ def create_role():
 
 
 @author_bp.route("/roles/<int:role_id>/update", methods=["PUT"])
-@handle_exceptions
 def update_role(role_id):
     """
     Cập nhật role.
@@ -97,7 +92,6 @@ def update_role(role_id):
 
 
 @author_bp.route("/roles/<int:role_id>/delete", methods=["DELETE"])
-@handle_exceptions
 def delete_role(role_id):
     """
     Xóa role.
@@ -110,7 +104,6 @@ def delete_role(role_id):
 
 
 @author_bp.route("/users/<int:user_id>/roles/list", methods=["GET"])
-@handle_exceptions
 def get_user_roles(user_id):
     """
     Lấy danh sách roles của 1 user.
@@ -125,7 +118,6 @@ def get_user_roles(user_id):
 # ================== PERMISSIONS ==================
 
 @author_bp.route("/permissions/list", methods=["GET"])
-@handle_exceptions
 def list_permissions():
     """
     Lấy danh sách tất cả permissions.
@@ -138,7 +130,6 @@ def list_permissions():
 
 
 @author_bp.route("/permissions/<int:perm_id>/get", methods=["GET"])
-@handle_exceptions
 def get_permission(perm_id):
     """
     Lấy chi tiết 1 permission.
@@ -151,7 +142,6 @@ def get_permission(perm_id):
 
 
 @author_bp.route("/permissions/create", methods=["POST"])
-@handle_exceptions
 def create_permission():
     """
     Tạo permission mới.
@@ -177,7 +167,6 @@ def create_permission():
 
 
 @author_bp.route("/permissions/<int:perm_id>/update", methods=["PUT"])
-@handle_exceptions
 def update_permission(perm_id):
     """
     Cập nhật permission.
@@ -195,7 +184,6 @@ def update_permission(perm_id):
 
 
 @author_bp.route("/permissions/<int:perm_id>/delete", methods=["DELETE"])
-@handle_exceptions
 def delete_permission(perm_id):
     """
     Xóa permission.
@@ -208,7 +196,6 @@ def delete_permission(perm_id):
 
 
 @author_bp.route("/users/<int:user_id>/permissions/list", methods=["GET"])
-@handle_exceptions
 def get_user_permissions(user_id):
     """
     Lấy danh sách permissions của 1 user (từ roles của user).
@@ -223,7 +210,6 @@ def get_user_permissions(user_id):
 # ================== ROLE <-> PERMISSION MAPPING ==================
 
 @author_bp.route("/roles/<int:role_id>/permissions/list", methods=["GET"])
-@handle_exceptions
 def list_role_permissions(role_id):
     """
     Lấy danh sách permissions của 1 role.
@@ -236,7 +222,6 @@ def list_role_permissions(role_id):
 
 
 @author_bp.route("/roles/<int:role_id>/permissions/<int:perm_id>/assign", methods=["POST"])
-@handle_exceptions
 def assign_permission_to_role(role_id, perm_id):
     """
     Gán permission cho role.
@@ -249,7 +234,6 @@ def assign_permission_to_role(role_id, perm_id):
 
 
 @author_bp.route("/roles/<int:role_id>/permissions/<int:perm_id>/remove", methods=["DELETE"])
-@handle_exceptions
 def remove_permission_from_role(role_id, perm_id):
     """
     Gỡ permission khỏi role.

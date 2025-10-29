@@ -8,6 +8,7 @@ class Role(db.Model):
     name = db.Column(db.String(100), unique=True, nullable=False)
     description = db.Column(db.String(255))
     level = db.Column(db.Integer, nullable=False, default=1)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
     updated_at = db.Column(db.DateTime, default=datetime.now(), onupdate=datetime.now())
     created_at = db.Column(db.DateTime, default=datetime.now())
 

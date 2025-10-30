@@ -19,6 +19,7 @@ DB_CONFIG = {
 # Cấu hình JWT cho xác thực người dùng
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")  # mặc định HS256 nếu không có
+AI_SERVER_URL = os.getenv("AI_SERVER_URL", "http://localhost:8500").rstrip("/")
 
 # Cấu hình Secret Key
 SECRET_KEY = os.getenv("SECRET_KEY")

@@ -59,7 +59,7 @@ pip freeze > requirements.txt
 ```
 
 
-**Generated:** 2025-10-26 20:12:32
+**Generated:** 2025-10-30 18:46:54
 
 ## 📂 Cấu trúc thư mục
 
@@ -91,7 +91,7 @@ backend/
 
 ## 🌐 API Endpoints
 
-_34 endpoint(s) found._
+_37 endpoint(s) found._
 
 | Method(s) | Path | Function | File | Description |
 |-----------|------|----------|------|-------------|
@@ -112,23 +112,26 @@ _34 endpoint(s) found._
 | POST | `/author/permissions/create` | `create_permission()` | `endpoints\author_enpoints.py` | Tạo permission mới. |
 | GET | `/author/permissions/list` | `list_permissions()` | `endpoints\author_enpoints.py` | Lấy danh sách tất cả permissions. |
 | DELETE | `/author/roles/<int:role_id>/delete` | `delete_role()` | `endpoints\author_enpoints.py` | Xóa role. |
-| GET | `/author/roles/<int:role_id>/get` | `get_role()` | `endpoints\author_enpoints.py` | Lấy thông tin chi tiết 1 role. |
-| POST | `/author/roles/<int:role_id>/permissions/<int:perm_id>/assign` | `assign_permission_to_role()` | `endpoints\author_enpoints.py` | Gán permission cho role. |
+| GET | `/author/roles/<int:role_id>/get` | `get_role()` | `endpoints\author_enpoints.py` | Lấy thông tin chi tiết 1 role theo ID. |
 | DELETE | `/author/roles/<int:role_id>/permissions/<int:perm_id>/remove` | `remove_permission_from_role()` | `endpoints\author_enpoints.py` | Gỡ permission khỏi role. |
+| POST | `/author/roles/<int:role_id>/permissions/assign` | `assign_permissions_to_role()` | `endpoints\author_enpoints.py` | Gán nhiều permission cho 1 role. |
 | GET | `/author/roles/<int:role_id>/permissions/list` | `list_role_permissions()` | `endpoints\author_enpoints.py` | Lấy danh sách permissions của 1 role. |
 | PUT | `/author/roles/<int:role_id>/update` | `update_role()` | `endpoints\author_enpoints.py` | Cập nhật role. |
 | POST | `/author/roles/create` | `create_role()` | `endpoints\author_enpoints.py` | Tạo role mới. |
+| GET | `/author/roles/get-by-name` | `get_role_by_name()` | `endpoints\author_enpoints.py` | Lấy thông tin chi tiết 1 role theo tên. |
 | GET | `/author/roles/list` | `list_roles()` | `endpoints\author_enpoints.py` | Lấy danh sách tất cả roles. |
 | GET | `/author/users/<int:user_id>/permissions/list` | `get_user_permissions()` | `endpoints\author_enpoints.py` | Lấy danh sách permissions của 1 user (từ roles của user). |
-| POST | `/author/users/<int:user_id>/roles/<int:role_id>/assign` | `assign_role_to_user()` | `endpoints\author_enpoints.py` | Gán role cho user. |
+| POST | `/author/users/<int:user_id>/roles/assign` | `assign_roles_to_user()` | `endpoints\author_enpoints.py` | Gán nhiều roles cho 1 user. |
 | GET | `/author/users/<int:user_id>/roles/list` | `get_user_roles()` | `endpoints\author_enpoints.py` | Lấy danh sách roles của 1 user. |
 | GET | `/test-connection` | `test_connection_api()` | `app.py` | Kiểm tra kết nối giữa server và database |
+| GET | `/users/active/<string:is_active>` | `list_users_by_active()` | `endpoints\usermanage_endpoints.py` | Lấy danh sách người dùng theo trạng thái hoạt động. |
 | POST | `/users/create` | `create_user()` | `endpoints\usermanage_endpoints.py` | Tạo mới người dùng. |
 | DELETE | `/users/delete/<int:user_id>` | `delete_user()` | `endpoints\usermanage_endpoints.py` | Xóa người dùng theo ID. |
-| GET | `/users/detail/<int:user_id>` | `get_user_detail()` | `endpoints\usermanage_endpoints.py` | Lấy thông tin chi tiết người dùng theo ID. |
+| GET | `/users/id/<int:user_id>` | `get_user_detail()` | `endpoints\usermanage_endpoints.py` | Lấy thông tin chi tiết người dùng theo ID. |
 | GET | `/users/list` | `list_users()` | `endpoints\usermanage_endpoints.py` | Lấy danh sách người dùng (có phân trang và tìm kiếm) |
 | PATCH | `/users/status/<int:user_id>` | `toggle_user_status()` | `endpoints\usermanage_endpoints.py` | Thay đổi trạng thái hoạt động của người dùng (active/inactive). |
 | PUT | `/users/update/<int:user_id>` | `update_user()` | `endpoints\usermanage_endpoints.py` | Cập nhật thông tin người dùng. |
+| GET | `/users/username/<string:username>` | `get_user_by_username()` | `endpoints\usermanage_endpoints.py` | Lấy thông tin người dùng theo username. |
 
 ---
 

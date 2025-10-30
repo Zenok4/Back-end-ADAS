@@ -10,7 +10,7 @@ class PermissionService:
     @staticmethod
     def list_permissions():
         perms = Permission.query.all()
-        print(">>> perms:", perms)  
+        print(">>> perms:", perms)
         return response_success([p.to_dict() for p in perms], key="permissions")
 
     @staticmethod
@@ -59,16 +59,39 @@ class PermissionService:
         return response_success({"id": perm_id}, key="deleted")
 
     @staticmethod
-    def assign_permission(role_id: int, perm_id: int):
-        role = Role.query.get(role_id)
-        perm = Permission.query.get(perm_id)
-        if not role or not perm:
-            return response_error("Role or Permission not found", HttpCode.not_found)
+    def assign_permissions(role_id: int, perm_ids: list[int]):
+        """
+        Gán nhiều permissions cho 1 role.
+        """
+        try:
+            if not perm_ids or not isinstance(perm_ids, list):
+                return response_error("perm_ids must be a non-empty list", HttpCode.bad_request)
 
-        if perm not in role.permissions:
-            role.permissions.append(perm)
+            role = Role.query.get(role_id)
+            if not role:
+                return response_error("Role not found", HttpCode.not_found)
+
+            # Lọc danh sách permission hợp lệ
+            perms = Permission.query.filter(Permission.id.in_(perm_ids)).all()
+            if not perms:
+                return response_error("No valid permissions found", HttpCode.not_found)
+
+            assigned = []
+            for perm in perms:
+                if perm not in role.permissions:
+                    role.permissions.append(perm)
+                    assigned.append(perm.to_dict())
+
             db.session.commit()
-        return response_success(role.to_dict(), key="role")
+
+            if not assigned:
+                return response_success([], key="assigned_permissions", message="Role already has all these permissions")
+
+            return response_success(assigned, key="assigned_permissions", message="Permissions assigned successfully")
+        except Exception as e:
+            db.session.rollback()
+            return response_error(f"Failed to assign permissions: {str(e)}", HttpCode.internal_server_error)
+
 
     @staticmethod
     def remove_permission(role_id: int, perm_id: int):

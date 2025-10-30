@@ -17,6 +17,7 @@ class HttpCode(IntEnum):
     unauthorized = 401
     forbidden = 403
     not_found = 404
+    not_acceptable = 406
     conflict = 409
 
     # 5xx Server Error

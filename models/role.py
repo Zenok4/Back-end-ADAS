@@ -18,12 +18,22 @@ class Role(db.Model):
         back_populates="roles"
     )
 
-    def to_dict(self):
-        return {
+    users = db.relationship(
+        "User",
+        secondary="user_roles",
+        back_populates="roles"
+    )
+
+    def to_dict(self, include_permissions=False):
+        data = {
             "id": self.id,
             "name": self.name,
             "description": self.description,
             "level": self.level,
+            "is_active": self.is_active,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
+        if include_permissions:
+            data["permissions"] = [p.to_dict() for p in self.permissions]
+        return data

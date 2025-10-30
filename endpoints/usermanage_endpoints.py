@@ -31,32 +31,53 @@ def list_users():
         )), HttpCode.internal_server_error
 
 
-# ================== DETAIL ==================
-@user_bp.route("/detail/<int:user_id>", methods=["GET"])
+# ================== DETAIL BY ID ==================
+@user_bp.route("/id/<int:user_id>", methods=["GET"])
 def get_user_detail(user_id):
     """
     Lấy thông tin chi tiết người dùng theo ID.
-    - Input JSON: { "user_id": ... }
+    - Method: GET
+    - URL: /users/id/<user_id>
+    - Body (optional): { "include_roles": bool }
     """
-    try:
-        result = UserService.get_user_by_id(user_id)
-        if not result:
-            return jsonify(response_error(
-                message="User not found",
-                code=HttpCode.not_found
-            )), HttpCode.not_found
+    data = request.get_json(silent=True) or {}
+    include_roles = bool(data.get("include_roles", False))
 
-        return jsonify(response_success(
-            data=result,
-            message="Fetched user detail successfully",
-            code=HttpCode.success
-        )), HttpCode.success
+    result = UserService.get_user_by_id(user_id, include_roles=include_roles)
+    return jsonify(result), result.get("code", HttpCode.success)
 
-    except Exception as e:
-        return jsonify(response_error(
-            message=f"Internal server error: {e}",
-            code=HttpCode.internal_server_error
-        )), HttpCode.internal_server_error
+
+# ================== DETAIL BY USERNAME ==================
+@user_bp.route("/username/<string:username>", methods=["GET"])
+def get_user_by_username(username):
+    """
+    Lấy thông tin người dùng theo username.
+    - Method: GET
+    - URL: /users/username/<username>
+    - Body (optional): { "include_roles": bool }
+    """
+    data = request.get_json(silent=True) or {}
+    include_roles = bool(data.get("include_roles", False))
+
+    result = UserService.get_user_by_username(username, include_roles=include_roles)
+    return jsonify(result), result.get("code", HttpCode.success)
+
+
+# ================== FILTER BY ACTIVE STATUS ==================
+@user_bp.route("/active/<string:is_active>", methods=["GET"])
+def list_users_by_active(is_active):
+    """
+    Lấy danh sách người dùng theo trạng thái hoạt động.
+    - Method: GET
+    - URL: /users/active/<true|false>
+    - Body (optional): { "include_roles": bool }
+    """
+    data = request.get_json(silent=True) or {}
+    include_roles = bool(data.get("include_roles", False))
+
+    is_active_bool = is_active.lower() == "true"
+    result = UserService.get_users_by_active(is_active_bool, include_roles=include_roles)
+    return jsonify(result), result.get("code", HttpCode.success)
 
 
 # ================== CREATE ==================

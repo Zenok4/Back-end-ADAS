@@ -16,16 +16,20 @@ author_bp = Blueprint("author", __name__, url_prefix="/author")
 
 
 # ================== ROLES ==================
-@author_bp.route("/users/<int:user_id>/roles/<int:role_id>/assign", methods=["POST"])
-def assign_role_to_user(user_id, role_id):
+@author_bp.route("/users/<int:user_id>/roles/assign", methods=["POST"])
+def assign_roles_to_user(user_id):
     """
-    Gán role cho user.
+    Gán nhiều roles cho 1 user.
     - Method: POST
-    - URL: /author/users/<user_id>/roles/<role_id>
-    - Response: { success: true, message: string, code: int, user_role_binding: {...} }
+    - URL: /author/users/<user_id>/roles/assign
+    - Body: { "role_ids": [1, 2, 3] }
+    - Response: { success: true, message: string, code: int, assigned_roles: [...] }
     """
-    result = RoleService.assign_role_to_user(user_id, role_id)
+    data = request.get_json()
+    role_ids = data.get("role_ids", [])
+    result = RoleService.assign_roles_to_user(user_id, role_ids)
     return jsonify(result), result.get("code", HttpCode.success)
+
 
 @author_bp.route("/roles/list", methods=["GET"])
 def list_roles():
@@ -33,22 +37,46 @@ def list_roles():
     Lấy danh sách tất cả roles.
     - Method: GET
     - URL: /author/roles/list
+    - Body: { "list_permissions": bool } (optional)
     - Response: { success: true, message: string, code: int, roles: [...] }
     """
-    result = RoleService.list_roles()
+    data = request.get_json(silent=True) or {}
+    is_list_permissions = bool(data.get("list_permissions", False))
+    result = RoleService.list_roles(is_list_permissions)
     return jsonify(result), result.get("code", HttpCode.success)
 
 @author_bp.route("/roles/<int:role_id>/get", methods=["GET"])
 def get_role(role_id):
     """
-    Lấy thông tin chi tiết 1 role.
+    Lấy thông tin chi tiết 1 role theo ID.
     - Method: GET
     - URL: /author/roles/<role_id>/get
+    - Body (optional): { "list_permissions": true }
     - Response: { success: true, message, code, role: {...} }
     """
-    result = RoleService.get_role_by_id(role_id)
+    data = request.get_json(silent=True) or {}
+    is_list_permissions = bool(data.get("list_permissions", False))
+    result = RoleService.get_role_by_id(role_id, include_permissions=is_list_permissions)
     return jsonify(result), result.get("code", HttpCode.success)
 
+@author_bp.route("/roles/get-by-name", methods=["GET"])
+def get_role_by_name():
+    """
+    Lấy thông tin chi tiết 1 role theo tên.
+    - Method: GET
+    - URL: /author/roles/get-by-name
+    - Body: { "name": string, "list_permissions": bool } (required)
+    - Response: { success: true, message: string, code: int, role: {...} }
+    """
+    data = request.get_json(silent=True) or {}
+    name = data.get("name")
+    is_list_permissions = bool(data.get("list_permissions", False))
+
+    if not name:
+        return jsonify(response_error(message="Missing required field: 'name'", code=HttpCode.bad_request)), HttpCode.bad_request
+
+    result = RoleService.get_role_by_name(name, include_permissions=is_list_permissions)
+    return jsonify(result), result.get("code", HttpCode.success)
 
 @author_bp.route("/roles/create", methods=["POST"])
 def create_role():
@@ -109,9 +137,11 @@ def get_user_roles(user_id):
     Lấy danh sách roles của 1 user.
     - Method: GET
     - URL: /author/users/<user_id>/roles/list
+    - Body (optional): { "include_permissions": bool }
     - Trả về: { success: true, message: string, code: int, roles: [...] }
     """
-    result = RoleService.get_user_roles(user_id)
+    include_permissions = request.args.get("include_permissions", "false").lower() == "true"
+    result = RoleService.get_user_roles(user_id, include_permissions)
     return jsonify(result), result.get("code", HttpCode.success)
 
 
@@ -217,20 +247,29 @@ def list_role_permissions(role_id):
     - URL: /author/roles/<role_id>/permissions/list
     - Trả về: { success: true, message: string, code: int, permissions: [...] }
     """
-    result = PermissionService.get_permissions_by_role(role_id)
+    result = PermissionService.get_permission_by_code(role_id)
     return jsonify(result), result.get("code", HttpCode.success)
 
 
-@author_bp.route("/roles/<int:role_id>/permissions/<int:perm_id>/assign", methods=["POST"])
-def assign_permission_to_role(role_id, perm_id):
+@author_bp.route("/roles/<int:role_id>/permissions/assign", methods=["POST"])
+def assign_permissions_to_role(role_id):
     """
-    Gán permission cho role.
+    Gán nhiều permission cho 1 role.
     - Method: POST
-    - URL: /author/roles/<role_id>/permissions/<perm_id>/assign
-    - Trả về: { success: true, message: string, code: int, role: {...} }
+    - URL: /author/roles/<role_id>/permissions/assign
+    - Body: { "perm_ids": [1, 2, 3] }
+    - Response: { success: true, message: string, code: int, assigned_permissions: [...] }
     """
-    result = PermissionService.assign_permission(role_id, perm_id)
+    data = request.get_json()
+    perm_ids = data.get("perm_ids", [])
+    if not perm_ids or not isinstance(perm_ids, list):
+        return jsonify(
+            response_error(message="perm_ids must be a non-empty list", code=HttpCode.bad_request)
+        ), HttpCode.bad_request
+    
+    result = PermissionService.assign_permissions(role_id, perm_ids)
     return jsonify(result), result.get("code", HttpCode.success)
+
 
 
 @author_bp.route("/roles/<int:role_id>/permissions/<int:perm_id>/remove", methods=["DELETE"])

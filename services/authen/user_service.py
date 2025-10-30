@@ -1,6 +1,8 @@
+from helper.normalization_response import response_error, response_success
 from models.user import User
 from sqlalchemy.exc import SQLAlchemyError
 from database import db
+from type.http_constants import HttpCode
 
 class UserService:
     """
@@ -46,17 +48,75 @@ class UserService:
             return {"error": f"Database error: {str(e)}"}
 
 
-    # ================== GET BY ID ==================
     @staticmethod
-    def get_user_by_id(user_id):
+    def get_user_by_id(user_id: int, include_roles: bool = False):
+        """
+        Lấy thông tin người dùng theo ID.
+        """
         try:
             user = User.query.get(user_id)
             if not user:
-                return None
-            return user.to_dict()
+                return response_error("User not found", HttpCode.not_found)
+            return response_success(
+                user.to_dict(include_roles=include_roles),
+                key="user",
+                message="Fetched user successfully"
+            )
         except SQLAlchemyError as e:
             db.session.rollback()
-            return {"error": f"Database error: {str(e)}"}
+            return response_error(f"Database error: {str(e)}", HttpCode.internal_server_error)
+        except Exception as e:
+            return response_error(f"Failed to get user: {str(e)}", HttpCode.internal_server_error)
+
+
+    # ================== GET BY USERNAME ==================
+    @staticmethod
+    def get_user_by_username(username: str, include_roles: bool = False):
+        """
+        Lấy thông tin người dùng theo username.
+        """
+        try:
+            user = User.query.filter_by(username=username).first()
+            if not user:
+                return response_error("User not found", HttpCode.success)
+            return response_success(
+                user.to_dict(include_roles=include_roles),
+                key="user",
+                message="Fetched user successfully"
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return response_error(f"Database error: {str(e)}", HttpCode.internal_server_error)
+        except Exception as e:
+            return response_error(f"Failed to get user: {str(e)}", HttpCode.internal_server_error)
+
+
+    # ================== FILTER BY ACTIVE STATUS ==================
+    @staticmethod
+    def get_users_by_active(is_active: bool, include_roles: bool = False):
+        """
+        Lấy danh sách người dùng theo trạng thái hoạt động.
+        """
+        try:
+            users = (
+                User.query
+                .filter_by(is_active=is_active)
+                .order_by(User.id.desc())
+                .all()
+            )
+            if not users:
+                return response_success([], key="users", message="No users found with given status")
+            return response_success(
+                [u.to_dict(include_roles=include_roles) for u in users],
+                key="users",
+                message="Fetched users successfully"
+            )
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return response_error(f"Database error: {str(e)}", HttpCode.internal_server_error)
+        except Exception as e:
+            return response_error(f"Failed to get users: {str(e)}", HttpCode.internal_server_error)
+
 
 
     # ================== CREATE ==================

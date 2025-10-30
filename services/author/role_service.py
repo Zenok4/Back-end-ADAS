@@ -8,32 +8,67 @@ from type.http_constants import HttpCode
 class RoleService:
 
     @staticmethod
-    def list_roles():
+    def list_roles(list_perm: bool = False):
+        """
+        Lấy danh sách tất cả các roles.
+        Nếu list_perm=True thì trả kèm danh sách permissions của từng role.
+        """
         try:
             roles = Role.query.all()
-            if( not roles):
-                return response_error("Not found any roles", HttpCode.no_content)
-            return response_success([r.to_dict() for r in roles], key="roles")
+            if not roles:
+                return response_success(
+                    [],
+                    key="roles",
+                    message="No roles found",
+                    code=HttpCode.success
+                )
+
+            # Dùng include_permissions theo flag list_perm
+            data = [r.to_dict(include_permissions=list_perm) for r in roles]
+            return response_success(
+                data,
+                key="roles",
+                message="List roles successfully",
+                code=HttpCode.success
+            )
         except Exception as e:
             return response_error(f"Failed to list roles: {str(e)}", HttpCode.internal_server_error)
 
     @staticmethod
-    def get_role_by_id(role_id: int):
+    def get_role_by_id(role_id: int, include_permissions: bool = False):
+        """
+        Lấy thông tin chi tiết 1 role theo id.
+        Nếu include_permissions=True => trả kèm danh sách permission.
+        """
         try:
             role = Role.query.get(role_id)
             if not role:
-                return response_error("Role not found", HttpCode.not_found)
-            return response_success(role.to_dict(), key="role")
+                return response_error("Role not found", HttpCode.success)
+
+            return response_success(
+                role.to_dict(include_permissions=include_permissions),
+                key="role",
+                message="Get role successfully"
+            )
         except Exception as e:
             return response_error(f"Failed to get role: {str(e)}", HttpCode.internal_server_error)
 
     @staticmethod
-    def get_role_by_name(name: str):
+    def get_role_by_name(name: str, include_permissions: bool = False):
+        """
+        Lấy thông tin chi tiết 1 role theo tên.
+        Nếu include_permissions=True => trả kèm danh sách permission.
+        """
         try:
             role = Role.query.filter_by(name=name).first()
             if not role:
-                return response_error("Role not found", HttpCode.not_found)
-            return response_success(role.to_dict(), key="role")
+                return response_error("Role not found", HttpCode.success)
+
+            return response_success(
+                role.to_dict(include_permissions=include_permissions),
+                key="role",
+                message="Get role successfully"
+            )
         except Exception as e:
             return response_error(f"Failed to get role: {str(e)}", HttpCode.internal_server_error)
 
@@ -80,7 +115,7 @@ class RoleService:
             return response_error(f"Delete failed: {str(e)}", HttpCode.internal_server_error)
 
     @staticmethod
-    def get_user_roles(user_id: int):
+    def get_user_roles(user_id: int, include_permissions: bool = False):
         """
         Trả về danh sách role mà user có.
         """
@@ -91,6 +126,41 @@ class RoleService:
                 .filter(UserRole.user_id == user_id)
                 .all()
             )
-            return response_success([r.to_dict() for r in roles], key="roles")
+            if not roles:
+                return response_success([], key="roles", message="User has no roles")
+            return response_success([r.to_dict(include_permissions=include_permissions) for r in roles], key="roles")
         except Exception as e:
             return response_error(f"Failed to get user roles: {str(e)}", HttpCode.internal_server_error)
+
+    @staticmethod
+    def assign_roles_to_user(user_id: int, role_ids: list[int]):
+        """
+        Gán nhiều roles cho 1 user.
+        """
+        try:
+            if not role_ids or not isinstance(role_ids, list):
+                return response_error("role_ids must be a non-empty list", HttpCode.bad_request)
+
+            # Kiểm tra roles tồn tại
+            roles = Role.query.filter(Role.id.in_(role_ids)).all()
+            if not roles:
+                return response_error("No valid roles found", HttpCode.not_found)
+
+            assigned_roles = []
+            for role in roles:
+                # Kiểm tra xem user đã có role này chưa
+                existing = UserRole.query.filter_by(user_id=user_id, role_id=role.id).first()
+                if not existing:
+                    user_role = UserRole(user_id=user_id, role_id=role.id)
+                    db.session.add(user_role)
+                    assigned_roles.append(role.to_dict())
+
+            db.session.commit()
+
+            if not assigned_roles:
+                return response_success([], key="assigned_roles", message="User already has all these roles")
+
+            return response_success(assigned_roles, key="assigned_roles", message="Roles assigned successfully")
+        except Exception as e:
+            db.session.rollback()
+            return response_error(f"Failed to assign roles: {str(e)}", HttpCode.internal_server_error)

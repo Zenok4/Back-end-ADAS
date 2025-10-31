@@ -1,3 +1,5 @@
+# role_service.py (ĐÃ SỬA)
+
 from database import db
 from models.role import Role
 from models.user_role import UserRole
@@ -16,21 +18,34 @@ class RoleService:
         try:
             roles = Role.query.all()
             if not roles:
+                # ===================================
+                # == BẮT ĐẦU SỬA (1) ==
+                # ===================================
+                # Bọc list rỗng trong {"roles": []} để khớp RolesResponse type
                 return response_success(
-                    [],
-                    key="roles",
+                    {"roles": []},
                     message="No roles found",
                     code=HttpCode.success
                 )
+                # ===================================
+                # == KẾT THÚC SỬA (1) ==
+                # ===================================
 
             # Dùng include_permissions theo flag list_perm
             data = [r.to_dict(include_permissions=list_perm) for r in roles]
+            
+            # ===================================
+            # == BẮT ĐẦU SỬA (2) ==
+            # ===================================
+            # Bọc data (list) trong {"roles": data} để khớp RolesResponse type
             return response_success(
-                data,
-                key="roles",
+                {"roles": data},
                 message="List roles successfully",
                 code=HttpCode.success
             )
+            # ===================================
+            # == KẾT THÚC SỬA (2) ==
+            # ===================================
         except Exception as e:
             return response_error(f"Failed to list roles: {str(e)}", HttpCode.internal_server_error)
 
@@ -135,32 +150,47 @@ class RoleService:
     @staticmethod
     def assign_roles_to_user(user_id: int, role_ids: list[int]):
         """
-        Gán nhiều roles cho 1 user.
+        SỬA LẠI: Đồng bộ (SET) roles cho 1 user.
+        Xóa tất cả role cũ và thêm tất cả role mới trong list.
         """
         try:
-            if not role_ids or not isinstance(role_ids, list):
-                return response_error("role_ids must be a non-empty list", HttpCode.bad_request)
+            # SỬA 1: Cho phép role_ids là list (kể cả list rỗng [])
+            if not isinstance(role_ids, list):
+                return response_error("role_ids must be a list", HttpCode.bad_request)
 
-            # Kiểm tra roles tồn tại
-            roles = Role.query.filter(Role.id.in_(role_ids)).all()
-            if not roles:
-                return response_error("No valid roles found", HttpCode.not_found)
+            # SỬA 2: Xóa tất cả các UserRole hiện tại của user này.
+            # Đây là bước quan trọng nhất để "đồng bộ".
+            UserRole.query.filter_by(user_id=user_id).delete()
 
             assigned_roles = []
-            for role in roles:
-                # Kiểm tra xem user đã có role này chưa
-                existing = UserRole.query.filter_by(user_id=user_id, role_id=role.id).first()
-                if not existing:
-                    user_role = UserRole(user_id=user_id, role_id=role.id)
-                    db.session.add(user_role)
-                    assigned_roles.append(role.to_dict())
+            
+            # SỬA 3: Chỉ chạy vòng lặp nếu list có ID (không phải list rỗng)
+            if role_ids: 
+                # Kiểm tra các role_ids gửi lên có tồn tại không
+                roles = Role.query.filter(Role.id.in_(role_ids)).all()
+                
+                # Lấy danh sách ID hợp lệ
+                valid_role_ids = {r.id for r in roles}
+                
+                # Thêm các vai trò hợp lệ
+                for role_id in role_ids:
+                    if role_id in valid_role_ids:
+                        user_role = UserRole(user_id=user_id, role_id=role_id)
+                        db.session.add(user_role)
+                        # (Thêm vào list để trả về)
+                        assigned_roles.append(
+                            next(r.to_dict() for r in roles if r.id == role_id)
+                        )
 
+            # SỬA 4: Commit transaction sau khi đã xóa và thêm
             db.session.commit()
 
-            if not assigned_roles:
-                return response_success([], key="assigned_roles", message="User already has all these roles")
-
-            return response_success(assigned_roles, key="assigned_roles", message="Roles assigned successfully")
+            return response_success(
+                assigned_roles, 
+                key="assigned_roles", 
+                message="Roles synchronized successfully"
+            )
+            
         except Exception as e:
             db.session.rollback()
             return response_error(f"Failed to assign roles: {str(e)}", HttpCode.internal_server_error)

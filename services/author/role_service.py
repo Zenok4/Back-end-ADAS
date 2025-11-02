@@ -8,30 +8,59 @@ from type.http_constants import HttpCode
 class RoleService:
 
     @staticmethod
-    def list_roles(list_perm: bool = False):
+    #Thêm phân trang
+    #Thêm tổng số roles
+    #thêm filter theo tên, mô tả, trạng thái,...
+    def list_roles(
+        page = 1,
+        limit = 20,
+        name = None,
+        description = None,
+        is_active = None,
+        list_perm: bool = False
+        ):
         """
         Lấy danh sách tất cả các roles.
         Nếu list_perm=True thì trả kèm danh sách permissions của từng role.
         """
         try:
-            roles = Role.query.all()
-            if not roles:
-                return response_success(
-                    [],
-                    key="roles",
-                    message="No roles found",
-                    code=HttpCode.success
-                )
+            query = Role.query
+            if name:
+                query = query.filter(Role.name.ilike(f"%{name}%"))
+            if description:
+                query = query.filter(Role.description.ilike(f"%{description}%"))
+            if is_active is not None:
+                if isinstance(is_active, str):
+                    is_active_bool = is_active.lower() == 'true'
+                else:
+                    is_active_bool = bool(is_active)
+                query = query.filter(Role.is_active == is_active_bool)
 
-            # Dùng include_permissions theo flag list_perm
+            total = query.count()
+            roles = (
+                query.order_by(Role.id.desc())
+                .offset((page - 1) * limit)
+                .limit(limit)
+                .all()
+            )
             data = [r.to_dict(include_permissions=list_perm) for r in roles]
+            payload = {
+                "roles": data,
+                "page": page,
+                "limit": limit,
+                "total": total,
+            }
             return response_success(
-                data,
-                key="roles",
+                payload,
                 message="List roles successfully",
                 code=HttpCode.success
             )
+
+        except exc.SQLAlchemyError as e:
+            db.session.rollback()
+            return response_error(f"Database error: {str(e)}", HttpCode.internal_server_error)
         except Exception as e:
+            db.session.rollback()
             return response_error(f"Failed to list roles: {str(e)}", HttpCode.internal_server_error)
 
     @staticmethod

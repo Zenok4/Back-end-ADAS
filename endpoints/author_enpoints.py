@@ -40,10 +40,33 @@ def list_roles():
     - Body: { "list_permissions": bool } (optional)
     - Response: { success: true, message: string, code: int, roles: [...] }
     """
-    data = request.get_json(silent=True) or {}
-    is_list_permissions = bool(data.get("list_permissions", False))
-    result = RoleService.list_roles(is_list_permissions)
-    return jsonify(result), result.get("code", HttpCode.success)
+    try:
+        page = request.args.get("page", 1, type=int)
+        limit = request.args.get("limit", 20, type=int)
+        name = request.args.get("name", None, type=str)
+        description = request.args.get("description", None, type=str)
+
+        list_permissions_str = request.args.get("list_permissions", "false", type=str)
+        is_list_permissions = list_permissions_str.lower() == "true"
+
+        is_active_str = request.args.get("is_active", None, type=str)
+        is_active = None
+        if is_active_str is not None:
+            is_active = is_active_str.lower() == "true"
+        result = RoleService.list_roles(
+            page=page,
+            limit=limit,
+            name=name,
+            description=description,
+            is_active=is_active,
+            list_perm=is_list_permissions
+        )
+        return jsonify(result), result.get("code", HttpCode.success)
+    except Exception as e:
+        return jsonify(
+            response_error(message=f"Error processing request: {str(e)}", code=HttpCode.internal_server_error)
+        ), HttpCode.internal_server_error
+
 
 @author_bp.route("/roles/<int:role_id>/get", methods=["GET"])
 def get_role(role_id):
@@ -55,7 +78,8 @@ def get_role(role_id):
     - Response: { success: true, message, code, role: {...} }
     """
     data = request.get_json(silent=True) or {}
-    is_list_permissions = bool(data.get("list_permissions", False))
+    is_list_permissions = request.args.get("list_permissions", "false").lower() == "true"
+    # is_list_permissions = bool(data.get("list_permissions", False))
     result = RoleService.get_role_by_id(role_id, include_permissions=is_list_permissions)
     return jsonify(result), result.get("code", HttpCode.success)
 

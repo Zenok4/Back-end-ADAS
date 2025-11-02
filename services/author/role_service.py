@@ -1,5 +1,3 @@
-# role_service.py (ĐÃ SỬA)
-
 from database import db
 from models.role import Role
 from models.user_role import UserRole
@@ -9,52 +7,23 @@ from type.http_constants import HttpCode
 
 class RoleService:
 
+    # =============== LIST ALL ROLES ===============
     @staticmethod
     def list_roles(list_perm: bool = False):
-        """
-        Lấy danh sách tất cả các roles.
-        Nếu list_perm=True thì trả kèm danh sách permissions của từng role.
-        """
         try:
             roles = Role.query.all()
             if not roles:
-                # ===================================
-                # == BẮT ĐẦU SỬA (1) ==
-                # ===================================
-                # Bọc list rỗng trong {"roles": []} để khớp RolesResponse type
-                return response_success(
-                    {"roles": []},
-                    message="No roles found",
-                    code=HttpCode.success
-                )
-                # ===================================
-                # == KẾT THÚC SỬA (1) ==
-                # ===================================
+                return response_success({"roles": []}, message="No roles found", code=HttpCode.success)
 
-            # Dùng include_permissions theo flag list_perm
             data = [r.to_dict(include_permissions=list_perm) for r in roles]
-            
-            # ===================================
-            # == BẮT ĐẦU SỬA (2) ==
-            # ===================================
-            # Bọc data (list) trong {"roles": data} để khớp RolesResponse type
-            return response_success(
-                {"roles": data},
-                message="List roles successfully",
-                code=HttpCode.success
-            )
-            # ===================================
-            # == KẾT THÚC SỬA (2) ==
-            # ===================================
+            return response_success({"roles": data}, message="List roles successfully", code=HttpCode.success)
         except Exception as e:
             return response_error(f"Failed to list roles: {str(e)}", HttpCode.internal_server_error)
 
+
+    # =============== GET ROLE BY ID ===============
     @staticmethod
     def get_role_by_id(role_id: int, include_permissions: bool = False):
-        """
-        Lấy thông tin chi tiết 1 role theo id.
-        Nếu include_permissions=True => trả kèm danh sách permission.
-        """
         try:
             role = Role.query.get(role_id)
             if not role:
@@ -68,12 +37,10 @@ class RoleService:
         except Exception as e:
             return response_error(f"Failed to get role: {str(e)}", HttpCode.internal_server_error)
 
+
+    # =============== GET ROLE BY NAME ===============
     @staticmethod
     def get_role_by_name(name: str, include_permissions: bool = False):
-        """
-        Lấy thông tin chi tiết 1 role theo tên.
-        Nếu include_permissions=True => trả kèm danh sách permission.
-        """
         try:
             role = Role.query.filter_by(name=name).first()
             if not role:
@@ -87,6 +54,8 @@ class RoleService:
         except Exception as e:
             return response_error(f"Failed to get role: {str(e)}", HttpCode.internal_server_error)
 
+
+    # =============== CREATE ROLE ===============
     @staticmethod
     def create_role(name: str, description: str = None):
         try:
@@ -98,6 +67,8 @@ class RoleService:
             db.session.rollback()
             return response_error(f"Create role failed: {str(e)}", HttpCode.internal_server_error)
 
+
+    # =============== UPDATE ROLE ===============
     @staticmethod
     def update_role(role_id: int, **kwargs):
         try:
@@ -106,7 +77,7 @@ class RoleService:
                 return response_error("Role not found", HttpCode.not_found)
 
             for key, value in kwargs.items():
-                if hasattr(role, key):  # tránh set field không hợp lệ
+                if hasattr(role, key):
                     setattr(role, key, value)
 
             db.session.commit()
@@ -115,6 +86,8 @@ class RoleService:
             db.session.rollback()
             return response_error(f"Update failed: {str(e)}", HttpCode.internal_server_error)
 
+
+    # =============== DELETE ROLE ===============
     @staticmethod
     def delete_role(role_id: int):
         try:
@@ -129,11 +102,10 @@ class RoleService:
             db.session.rollback()
             return response_error(f"Delete failed: {str(e)}", HttpCode.internal_server_error)
 
+
+    # =============== GET USER ROLES ===============
     @staticmethod
     def get_user_roles(user_id: int, include_permissions: bool = False):
-        """
-        Trả về danh sách role mà user có.
-        """
         try:
             roles = (
                 db.session.query(Role)
@@ -143,54 +115,43 @@ class RoleService:
             )
             if not roles:
                 return response_success([], key="roles", message="User has no roles")
-            return response_success([r.to_dict(include_permissions=include_permissions) for r in roles], key="roles")
+            return response_success(
+                [r.to_dict(include_permissions=include_permissions) for r in roles],
+                key="roles"
+            )
         except Exception as e:
             return response_error(f"Failed to get user roles: {str(e)}", HttpCode.internal_server_error)
 
+
+    # =============== ASSIGN ROLES TO USER ===============
     @staticmethod
     def assign_roles_to_user(user_id: int, role_ids: list[int]):
-        """
-        SỬA LẠI: Đồng bộ (SET) roles cho 1 user.
-        Xóa tất cả role cũ và thêm tất cả role mới trong list.
-        """
         try:
-            # SỬA 1: Cho phép role_ids là list (kể cả list rỗng [])
             if not isinstance(role_ids, list):
                 return response_error("role_ids must be a list", HttpCode.bad_request)
 
-            # SỬA 2: Xóa tất cả các UserRole hiện tại của user này.
-            # Đây là bước quan trọng nhất để "đồng bộ".
             UserRole.query.filter_by(user_id=user_id).delete()
-
             assigned_roles = []
-            
-            # SỬA 3: Chỉ chạy vòng lặp nếu list có ID (không phải list rỗng)
-            if role_ids: 
-                # Kiểm tra các role_ids gửi lên có tồn tại không
+
+            if role_ids:
                 roles = Role.query.filter(Role.id.in_(role_ids)).all()
-                
-                # Lấy danh sách ID hợp lệ
                 valid_role_ids = {r.id for r in roles}
-                
-                # Thêm các vai trò hợp lệ
+
                 for role_id in role_ids:
                     if role_id in valid_role_ids:
                         user_role = UserRole(user_id=user_id, role_id=role_id)
                         db.session.add(user_role)
-                        # (Thêm vào list để trả về)
                         assigned_roles.append(
                             next(r.to_dict() for r in roles if r.id == role_id)
                         )
 
-            # SỬA 4: Commit transaction sau khi đã xóa và thêm
             db.session.commit()
 
             return response_success(
-                assigned_roles, 
-                key="assigned_roles", 
+                assigned_roles,
+                key="assigned_roles",
                 message="Roles synchronized successfully"
             )
-            
         except Exception as e:
             db.session.rollback()
             return response_error(f"Failed to assign roles: {str(e)}", HttpCode.internal_server_error)

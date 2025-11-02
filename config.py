@@ -23,3 +23,6 @@ JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")  # mặc định HS256 nếu
 # Cấu hình Secret Key
 SECRET_KEY = os.getenv("SECRET_KEY")
 REFRESH_SECRET_KEY = os.getenv("REFRESH_SECRET_KEY")
+
+# Cấu hình URL của AI Server
+AI_SERVER_URL = os.getenv("AI_SERVER_URL", "")

@@ -12,6 +12,7 @@ from endpoints.authen_enpoints import authen_bp
 from endpoints.author_enpoints import author_bp
 from endpoints.usermanage_endpoints import user_bp
 from endpoints.sign_endpoints import sign_bp
+from endpoints.drowsy_endpoints import drowsy_blueprint
 from models import init_dtb
 
 app = Flask(__name__)
@@ -26,6 +27,7 @@ app.register_blueprint(authen_bp, url_prefix="/authen")
 app.register_blueprint(author_bp, url_prefix="/author")
 app.register_blueprint(user_bp, url_prefix="/users")
 app.register_blueprint(sign_bp, url_prefix="/sign")
+app.register_blueprint(drowsy_blueprint, url_prefix="/drowsy")
 
 
 # ========== TEST Connection ==========

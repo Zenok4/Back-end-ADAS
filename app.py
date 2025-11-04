@@ -11,7 +11,7 @@ from database import get_mysql_connection
 from endpoints.authen_enpoints import authen_bp
 from endpoints.author_enpoints import author_bp
 from endpoints.usermanage_endpoints import user_bp
-from endpoints.drowsy_endpoints import drowsy_blueprint
+from endpoints.sign_endpoints import sign_bp
 from models import init_dtb
 
 app = Flask(__name__)
@@ -25,7 +25,7 @@ CORS(app, supports_credentials=True)
 app.register_blueprint(authen_bp, url_prefix="/authen")
 app.register_blueprint(author_bp, url_prefix="/author")
 app.register_blueprint(user_bp, url_prefix="/users")
-app.register_blueprint(drowsy_blueprint, url_prefix="/drowsy")
+app.register_blueprint(sign_bp, url_prefix="/sign")
 
 
 # ========== TEST Connection ==========

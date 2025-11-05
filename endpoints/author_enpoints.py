@@ -114,13 +114,14 @@ def create_role():
     data = request.get_json(silent=True) or {}
     name = data.get("name")
     description = data.get("description")
+    is_active = data.get("is_active", True)
 
     if not name:
         return jsonify(
             response_error(message="Role name required", code=HttpCode.bad_request)
         ), HttpCode.bad_request
 
-    result = RoleService.create_role(name, description)
+    result = RoleService.create_role(name, description, is_active)
     return jsonify(result), result.get("code", HttpCode.created)
 
 

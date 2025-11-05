@@ -101,9 +101,9 @@ class RoleService:
 
     # =============== CREATE ROLE ===============
     @staticmethod
-    def create_role(name: str, description: str = None):
+    def create_role(name: str, description: str = None, is_active: bool = True):
         try:
-            role = Role(name=name, description=description)
+            role = Role(name=name, description=description, is_active=is_active)
             db.session.add(role)
             db.session.commit()
             return response_success(role.to_dict(), key="role", message="Role created", code=HttpCode.created)

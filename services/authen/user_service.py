@@ -1,14 +1,57 @@
+import datetime
 from helper.normalization_response import response_error, response_success
 from models.user import User
 from sqlalchemy.exc import SQLAlchemyError
+from models.sessions import UserSession
 from database import db
 from type.http_constants import HttpCode
+
 
 class UserService:
     """
     Service xử lý toàn bộ nghiệp vụ liên quan đến người dùng.
     Bao gồm: CRUD, tìm kiếm, phân trang.
     """
+
+
+    # =================== GET SESSION ==================
+    @staticmethod
+    def get_user_by_session(session_id: str):
+        """
+        Lấy thông tin user dựa theo session_id.
+        """
+        try:
+            # 1️⃣ Tìm session còn hiệu lực
+            session = (
+                UserSession.query
+                .filter_by(session_id=session_id, revoked=False)
+                .first()
+            )
+
+            if not session:
+                return response_error("Session not found or revoked", HttpCode.unauthorized)
+
+            # 2️⃣ Kiểm tra hạn
+            if session.expires_at and session.expires_at < datetime.now():
+                return response_error("Session expired", HttpCode.unauthorized)
+
+            # 3️⃣ Tìm user
+            user = User.query.get(session.user_id)
+            if not user:
+                return response_error("User not found", HttpCode.not_found)
+
+            # 4️⃣ Trả kết quả
+            return response_success(
+                user.to_dict(include_roles=True),
+                key="user",
+                message="Fetched user successfully"
+            )
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return response_error(f"Database error: {str(e)}", HttpCode.internal_server_error)
+        except Exception as e:
+            return response_error(f"Failed to get user by session: {str(e)}", HttpCode.internal_server_error)
 
     # ================== GET ALL ==================
     @staticmethod

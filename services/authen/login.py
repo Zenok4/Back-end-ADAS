@@ -67,11 +67,11 @@ class LoginService:
         refresh_expires = timedelta(days=7)
 
         access_token = create_access_token(
-            identity={"id": user.id, "username": user.username},
+            identity=str(user.id),
             expires_delta=access_expires
         )
         refresh_token = create_refresh_token(
-            identity={"id": user.id, "username": user.username},
+            identity=str(user.id),
             expires_delta=refresh_expires
         )
 

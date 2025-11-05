@@ -1,5 +1,6 @@
 from datetime import timedelta
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from services.authen.login import LoginService
 from services.authen.session_service import SessionService
 from services.authen.user_service import UserService
@@ -289,21 +290,35 @@ def logout():
 
 ## ================== Me (Current User) ==================
 @authen_bp.route("/me", methods=["GET"])
+@jwt_required()
 def get_current_user():
     """
-    Lấy thông tin user hiện tại dựa trên session_id.
-    - Input: { "session_id": "..." } hoặc query param/session header
-    - Output: { "user": {...} }
+    Lấy thông tin người dùng hiện tại dựa trên access token (JWT).
+    - Header: Authorization: Bearer <access_token>
+    - Output:
+        {
+            "success": true,
+            "message": "Fetched user successfully",
+            "code": 200,
+            "user": { ... }
+        }
     """
-    data = request.get_json(silent=True) or {}
-    session_id = data.get("session_id") or request.headers.get("X-Session-Id")
+    try:
+        user_id = get_jwt_identity()  # Lấy user_id từ token
+        if not user_id:
+            result = response_error("Missing or invalid token", code=HttpCode.unauthorized)
+            return jsonify(result), result["error"]["code"]
 
-    if not session_id:
-        return jsonify(response_error(message="Session ID required", code=HttpCode.bad_request)), HttpCode.bad_request
+        # Gọi service để lấy thông tin chi tiết user
+        result = UserService.get_user_by_id(int(user_id), include_roles=True)
+        status = result.get("code", HttpCode.success)
 
-    result = UserService.get_user_by_session(session_id)
-    status = result.get("code", HttpCode.unauthorized)
-    return jsonify(result), status
+        return jsonify(result), status
+
+    except Exception as e:
+        result = response_error(f"Failed to fetch current user: {str(e)}", code=HttpCode.internal_server_error)
+        return jsonify(result), result["error"]["code"]
+
 
 
 ## ================== Register ==================

@@ -207,3 +207,5 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+test/test_batch_sign_detection.py
+test/images/2_jpg.rf.8506df942976df554c3c4bae3e74e986.jpg

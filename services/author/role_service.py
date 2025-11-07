@@ -3,6 +3,7 @@ from models.role import Role
 from models.user_role import UserRole
 from helper.normalization_response import response_error, response_success
 from type.http_constants import HttpCode
+from sqlalchemy import exc
 
 
 class RoleService:
@@ -101,9 +102,9 @@ class RoleService:
 
     # =============== CREATE ROLE ===============
     @staticmethod
-    def create_role(name: str, description: str = None, is_active: bool = True):
+    def create_role(name: str, description: str = None, is_active: bool = True, level: int = 1):
         try:
-            role = Role(name=name, description=description, is_active=is_active)
+            role = Role(name=name, description=description, is_active=is_active, level=level)
             db.session.add(role)
             db.session.commit()
             return response_success(role.to_dict(), key="role", message="Role created", code=HttpCode.created)

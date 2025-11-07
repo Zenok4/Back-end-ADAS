@@ -115,13 +115,14 @@ def create_role():
     name = data.get("name")
     description = data.get("description")
     is_active = data.get("is_active", True)
+    level = data.get("level", 1)
 
     if not name:
         return jsonify(
             response_error(message="Role name required", code=HttpCode.bad_request)
         ), HttpCode.bad_request
 
-    result = RoleService.create_role(name, description, is_active)
+    result = RoleService.create_role(name, description, is_active, level)
     return jsonify(result), result.get("code", HttpCode.created)
 
 
@@ -131,7 +132,7 @@ def update_role(role_id):
     Cập nhật role.
     - Method: PUT
     - URL: /author/roles/<role_id>/update
-    - Input JSON: { "name": "...", "description": "..." } (có thể partial)
+    - Input JSON: { "name": "...", "description": "...", "level": int, "is_active": boolean } (có thể partial)
     - Trả về: { success: true, message: string, code: int, role: {...} }
     """
     data = request.get_json(silent=True) or {}

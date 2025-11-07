@@ -7,7 +7,7 @@ Tạo môi trường ảo trong thư mục `backend/libs`:
 
 ```bash
 cd Back-end-ADAS
-python -m venv libs
+py -3.11 -m venv libs
 ```
 
 ## 2. Kích hoạt môi trường ảo
@@ -59,7 +59,7 @@ pip freeze > requirements.txt
 ```
 
 
-**Generated:** 2025-10-30 18:46:54
+**Generated:** 2025-11-05 15:55:58
 
 ## 📂 Cấu trúc thư mục
 
@@ -91,7 +91,7 @@ backend/
 
 ## 🌐 API Endpoints
 
-_37 endpoint(s) found._
+_39 endpoint(s) found._
 
 | Method(s) | Path | Function | File | Description |
 |-----------|------|----------|------|-------------|
@@ -101,7 +101,7 @@ _37 endpoint(s) found._
 | POST | `/authen/login/phone/verify` | `verify_phone_otp()` | `endpoints\authen_enpoints.py` | Xác thực OTP để đăng nhập bằng số điện thoại. |
 | POST | `/authen/login/username` | `login_username()` | `endpoints\authen_enpoints.py` | Đăng nhập bằng username + password. |
 | POST | `/authen/logout` | `logout()` | `endpoints\authen_enpoints.py` | Đăng xuất người dùng: thu hồi (revoke) session trong DB. |
-| GET | `/authen/me` | `get_current_user()` | `endpoints\authen_enpoints.py` | Lấy thông tin user hiện tại dựa trên session_id. |
+| GET | `/authen/me` | `get_current_user()` | `endpoints\authen_enpoints.py` | Lấy thông tin người dùng hiện tại dựa trên access token (JWT). |
 | POST | `/authen/refresh` | `refresh_token()` | `endpoints\authen_enpoints.py` | Cấp lại access_token mới bằng refresh_token. |
 | POST | `/authen/register/email` | `register_email()` | `endpoints\authen_enpoints.py` | Đăng ký bằng email + password + OTP. |
 | POST | `/authen/register/phone` | `register_phone()` | `endpoints\authen_enpoints.py` | Đăng ký bằng số điện thoại + OTP. |
@@ -123,15 +123,17 @@ _37 endpoint(s) found._
 | GET | `/author/users/<int:user_id>/permissions/list` | `get_user_permissions()` | `endpoints\author_enpoints.py` | Lấy danh sách permissions của 1 user (từ roles của user). |
 | POST | `/author/users/<int:user_id>/roles/assign` | `assign_roles_to_user()` | `endpoints\author_enpoints.py` | Gán nhiều roles cho 1 user. |
 | GET | `/author/users/<int:user_id>/roles/list` | `get_user_roles()` | `endpoints\author_enpoints.py` | Lấy danh sách roles của 1 user. |
+| POST | `/detect` | `detect_drowsiness()` | `endpoints\drowsy_endpoints.py` |  |
+| POST | `/predict` | `sign_predict()` | `endpoints\sign_endpoints.py` | Endpoint nhận diện biển báo giao thông. |
 | GET | `/test-connection` | `test_connection_api()` | `app.py` | Kiểm tra kết nối giữa server và database |
-| GET | `/users/active/<string:is_active>` | `list_users_by_active()` | `endpoints\usermanage_endpoints.py` | Lấy danh sách người dùng theo trạng thái hoạt động. |
-| POST | `/users/create` | `create_user()` | `endpoints\usermanage_endpoints.py` | Tạo mới người dùng. |
-| DELETE | `/users/delete/<int:user_id>` | `delete_user()` | `endpoints\usermanage_endpoints.py` | Xóa người dùng theo ID. |
-| GET | `/users/id/<int:user_id>` | `get_user_detail()` | `endpoints\usermanage_endpoints.py` | Lấy thông tin chi tiết người dùng theo ID. |
-| GET | `/users/list` | `list_users()` | `endpoints\usermanage_endpoints.py` | Lấy danh sách người dùng (có phân trang và tìm kiếm) |
-| PATCH | `/users/status/<int:user_id>` | `toggle_user_status()` | `endpoints\usermanage_endpoints.py` | Thay đổi trạng thái hoạt động của người dùng (active/inactive). |
-| PUT | `/users/update/<int:user_id>` | `update_user()` | `endpoints\usermanage_endpoints.py` | Cập nhật thông tin người dùng. |
-| GET | `/users/username/<string:username>` | `get_user_by_username()` | `endpoints\usermanage_endpoints.py` | Lấy thông tin người dùng theo username. |
+| GET | `/users/active/<string:is_active>` | `list_users_by_active()` | `endpoints\usermanage_endpoints.py` |  |
+| POST | `/users/create` | `create_user()` | `endpoints\usermanage_endpoints.py` |  |
+| DELETE | `/users/delete/<int:user_id>` | `delete_user()` | `endpoints\usermanage_endpoints.py` |  |
+| GET | `/users/id/<int:user_id>` | `get_user_detail()` | `endpoints\usermanage_endpoints.py` |  |
+| GET | `/users/list` | `list_users()` | `endpoints\usermanage_endpoints.py` |  |
+| PATCH | `/users/status/<int:user_id>` | `toggle_user_status()` | `endpoints\usermanage_endpoints.py` |  |
+| PUT | `/users/update/<int:user_id>` | `update_user()` | `endpoints\usermanage_endpoints.py` |  |
+| GET | `/users/username/<string:username>` | `get_user_by_username()` | `endpoints\usermanage_endpoints.py` |  |
 
 ---
 

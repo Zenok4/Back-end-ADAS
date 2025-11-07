@@ -4,11 +4,11 @@ from services.ai.drowsy_services import DrowsyService
 from middlewares.permission_required import permission_required
 from helper.normalization_response import response_error, response_success
 
-drowsy_blueprint = Blueprint("drowsy", __name__)
+drowsy_bp= Blueprint("drowsy", __name__)
 drowsy_service = DrowsyService()
 
 
-@drowsy_blueprint.route("/detect", methods=["POST"])
+@drowsy_bp.route("/detect", methods=["POST"])
 def detect_drowsiness():
     try:
         image_data = request.files.get("image")

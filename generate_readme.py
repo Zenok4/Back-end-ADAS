@@ -172,7 +172,7 @@ Tạo môi trường ảo trong thư mục `backend/libs`:
 
 ```bash
 cd Back-end-ADAS
-python -m venv libs
+py -3.11 -m venv libs
 ```
 
 ## 2. Kích hoạt môi trường ảo

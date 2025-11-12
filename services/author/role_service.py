@@ -102,9 +102,9 @@ class RoleService:
             return response_error(f"Failed to get role: {str(e)}", HttpCode.internal_server_error)
 
     @staticmethod
-    def create_role(name: str, description: str = None):
+    def create_role(name: str, description: str = None, is_active: bool = True, level: int = 1):
         try:
-            role = Role(name=name, description=description)
+            role = Role(name=name, description=description, is_active=is_active, level=level)
             db.session.add(role)
             db.session.commit()
             return response_success(role.to_dict(), key="role", message="Role created", code=HttpCode.created)

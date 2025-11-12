@@ -38,9 +38,9 @@ class User(db.Model):
         return data
 
 
-@event.listens_for(User, 'after_insert')
-def assign_default_role(mapper, connection, target):
-    default_role_id = 1
-    connection.execute(
-        db.insert(UserRole.__table__).values(user_id=target.id, role_id=default_role_id)
-    )
+# @event.listens_for(User, 'after_insert')
+# def assign_default_role(mapper, connection, target):
+#     default_role_id = 1
+#     connection.execute(
+#         db.insert(UserRole.__table__).values(user_id=target.id, role_id=default_role_id)
+#     )

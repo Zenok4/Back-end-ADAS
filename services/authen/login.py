@@ -9,6 +9,8 @@ from services.authen.session_service import SessionService
 import jwt
 from config import REFRESH_SECRET_KEY
 
+from database import db
+
 
 class LoginService:
 
@@ -50,7 +52,7 @@ class LoginService:
         """
         Đăng nhập bằng email + password + OTP (nếu có).
         """
-        user_or_error = OTPService.verify_email_otp(email, password, otp_code)
+        user_or_error = OTPService.verify_email_otp(email, password, otp_code, "login")
         if isinstance(user_or_error, dict) and "error" in user_or_error:
             return user_or_error
 
@@ -125,3 +127,45 @@ class LoginService:
         Đăng xuất: revoke session.
         """
         return SessionService.revoke_session(session_id)
+    
+    # ================== FORGOT PASSWORD FLOW ==================
+
+    @staticmethod
+    def request_forgot_password(identifier: str):
+        """
+        Gửi OTP phục hồi mật khẩu qua email hoặc phone.
+        - identifier có thể là email hoặc phone
+        """
+        user = User.query.filter(
+            (User.email == identifier) | (User.phone == identifier)
+        ).first()
+
+        if not user:
+            return {"error": "User not found"}
+
+        
+        return OTPService.send_forgot_password_otp(identifier)
+
+    @staticmethod
+    def reset_password(identifier: str, otp_code: str, new_password: str):
+        """
+        Xác thực OTP và cập nhật mật khẩu mới.
+        identifier: email hoặc phone
+        """
+        # 1) Verify OTP
+        user_or_error = OTPService.verify_forgot_password_otp(identifier, otp_code)
+        if isinstance(user_or_error, dict) and "error" in user_or_error:
+            return user_or_error
+
+        user = user_or_error
+
+        # 2) Update password
+        from werkzeug.security import generate_password_hash
+        user.password_hash = generate_password_hash(new_password)
+
+        db.session.commit()
+
+        return {
+            "success": True,
+            "message": "Password has been reset successfully."
+        }

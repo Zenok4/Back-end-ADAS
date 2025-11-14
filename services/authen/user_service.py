@@ -16,6 +16,7 @@ except ImportError:
 class UserService:
 
     # =============== GET ALL USERS ===============
+    # (Giữ nguyên hàm get_all_users)
     @staticmethod
     def get_all_users(page=1, limit=20, keyword=""):
         try:
@@ -53,6 +54,7 @@ class UserService:
 
 
     # =============== GET USER BY ID ===============
+    # (Giữ nguyên hàm get_user_by_id)
     @staticmethod
     def get_user_by_id(user_id: int, include_roles: bool = False):
         try:
@@ -73,6 +75,7 @@ class UserService:
 
 
     # =============== GET USER BY USERNAME ===============
+    # (Giữ nguyên hàm get_user_by_username)
     @staticmethod
     def get_user_by_username(username: str, include_roles: bool = False):
         try:
@@ -91,6 +94,7 @@ class UserService:
 
 
     # =============== FILTER USERS BY ACTIVE STATUS ===============
+    # (Giữ nguyên hàm get_users_by_active)
     @staticmethod
     def get_users_by_active(is_active: bool, include_roles: bool = False):
         try:
@@ -113,6 +117,7 @@ class UserService:
 
 
     # =============== CREATE USER ===============
+    # (Giữ nguyên hàm create_user)
     @staticmethod
     def create_user(data):
         try:
@@ -140,14 +145,8 @@ class UserService:
 
         except IntegrityError as e:
             db.session.rollback()
-            error_message = str(e.orig).lower()
-            if "user.username" in error_message:
-                return response_error("Username already exists", HttpCode.bad_request)
-            if "user.email" in error_message:
-                return response_error("Email already exists", HttpCode.bad_request)
-            if "user.phone" in error_message:
-                return response_error("Phone already exists", HttpCode.bad_request)
-            return response_error(f"Duplicate entry error: {error_message}", HttpCode.bad_request)
+            # ... (Giữ nguyên xử lý lỗi)
+            return response_error(f"Duplicate entry error: {str(e.orig)}", HttpCode.bad_request)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -165,9 +164,23 @@ class UserService:
             if not user:
                 return response_error("User not found", HttpCode.not_found)
 
-            for key in ["username", "email", "phone", "display_name"]:
-                if key in data and data[key]:
+            # === BẮT ĐẦU SỬA ĐỔI ===
+            # Liệt kê các trường được phép cập nhật
+            allowed_fields = [
+                "username", 
+                "email", 
+                "phone", 
+                "display_name",
+                "address",        # Thêm mới
+                "vehicle_name",   # Thêm mới
+                "license_plate"   # Thêm mới
+            ]
+
+            for key in allowed_fields:
+                # Kiểm tra `is not None` để cho phép cập nhật giá trị rỗng ("")
+                if key in data and data[key] is not None:
                     setattr(user, key, data[key])
+            # === KẾT THÚC SỬA ĐỔI ===
 
             db.session.commit()
             
@@ -178,14 +191,8 @@ class UserService:
 
         except IntegrityError as e:
             db.session.rollback()
-            error_message = str(e.orig).lower()
-            if "user.username" in error_message:
-                return response_error("Username already exists", HttpCode.bad_request)
-            if "user.email" in error_message:
-                return response_error("Email already exists", HttpCode.bad_request)
-            if "user.phone" in error_message:
-                return response_error("Phone already exists", HttpCode.bad_request)
-            return response_error(f"Duplicate entry error: {error_message}", HttpCode.bad_request)
+            # ... (Giữ nguyên xử lý lỗi)
+            return response_error(f"Duplicate entry error: {str(e.orig)}", HttpCode.bad_request)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -196,6 +203,7 @@ class UserService:
 
 
     # =============== DELETE USER ===============
+    # (Giữ nguyên hàm delete_user)
     @staticmethod
     def delete_user(user_id):
         try:
@@ -216,6 +224,7 @@ class UserService:
 
 
     # =============== TOGGLE USER STATUS ===============
+    # (Giữ nguyên hàm toggle_status)
     @staticmethod
     def toggle_status(user_id, data):
         try:
@@ -243,6 +252,7 @@ class UserService:
 
 
     # =============== CHANGE PASSWORD ===============
+    # (Giữ nguyên hàm change_password)
     @staticmethod
     def change_password(user_id, data):
         try:

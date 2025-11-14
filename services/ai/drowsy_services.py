@@ -14,24 +14,24 @@ class DrowsyService:
         self.predict_url = f"{self.base}/drowsy/predict"
 
     def _to_confidence(self, is_drowsy: bool, ratio_eyes: float) -> Decimal:
-        """
-        Quy đổi đơn giản về [0,1] để khớp constraint của model.
-        Bạn có thể thay bằng công thức chuẩn sau này.
-        """
-        # ví dụ: nếu buồn ngủ -> 0.9, ngược lại -> 0.1
         val = 0.9 if is_drowsy else 0.1
         return Decimal(str(round(val, 4)))
 
-    def detect_drowsiness(self, image_data, detection_event_id: int | None = None):
+    def detect_drowsiness(
+        self,
+        image_base64: str,
+        detection_event_id: int | None = None,
+        session_id: str | None = None,
+    ):
         try:
-            filename = getattr(image_data, "filename", None) or "upload.jpg"
-            mimetype = (
-                getattr(image_data, "mimetype", None) or "application/octet-stream"
-            )
-            stream = getattr(image_data, "stream", None) or image_data
+            # ----- Gửi JSON sang AI server (không dùng file nữa) -----
+            payload = {
+                "image_base64": image_base64,
+            }
+            if session_id is not None:
+                payload["session_id"] = session_id
 
-            files = {"image": (filename, stream, mimetype)}
-            resp = requests.post(self.predict_url, files=files, timeout=15)
+            resp = requests.post(self.predict_url, json=payload, timeout=15)
 
             if resp.status_code != 200:
                 raise Exception(f"AI server {resp.status_code}: {resp.text}")
@@ -50,18 +50,16 @@ class DrowsyService:
 
                 event = DrowsinessEvent(
                     detection_event_id=detection_event_id,
-                    # tuỳ bạn có dữ liệu thật thì set, còn không để None/0:
-                    eye_closure_duration_ms=None,  # hoặc tính từ frame_count -> ms nếu bạn có FPS
+                    eye_closure_duration_ms=None,
                     yawn_detected=False,
                     head_nod_count=0,
                     confidence=conf,
-                    # created_at/updated_at tự set theo default của model
                 )
                 db.session.add(event)
                 db.session.commit()
                 created_event_id = event.id
 
-            # Trả về theo schema BE đang dùng (không cần đúng cột DB)
+            # Trả về theo schema BE đang dùng
             return {
                 "is_drowsy": is_drowsy,
                 "message": message,

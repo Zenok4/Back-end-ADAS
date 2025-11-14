@@ -1,5 +1,7 @@
+from sqlalchemy.exc import SQLAlchemyError
 from flask_jwt_extended import create_access_token, create_refresh_token
 from werkzeug.security import check_password_hash
+from werkzeug.security import generate_password_hash
 from datetime import timedelta
 
 from models.user import User
@@ -128,44 +130,74 @@ class LoginService:
         """
         return SessionService.revoke_session(session_id)
     
-    # ================== FORGOT PASSWORD FLOW ==================
+    # ================== FORGOT PASSWORD - EMAIL ==================
+    @staticmethod
+    def request_forgot_password_email(email: str):
+        """
+        Gửi OTP phục hồi mật khẩu qua email.
+        """
+        try:
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                return {"error": "User not found"}
+
+            return OTPService.send_email_otp(email, purpose="verify")
+
+        except Exception as e:
+            return {"error": f"Internal server error: {str(e)}"}
 
     @staticmethod
-    def request_forgot_password(identifier: str):
+    def reset_password_email(email: str, otp_code: str, new_password: str):
         """
-        Gửi OTP phục hồi mật khẩu qua email hoặc phone.
-        - identifier có thể là email hoặc phone
+        Xác thực OTP và cập nhật mật khẩu mới qua email.
         """
-        user = User.query.filter(
-            (User.email == identifier) | (User.phone == identifier)
-        ).first()
+        try:
+            user_or_error = OTPService.verify_email_otp(email, otp_code=otp_code, purpose="verify")
+            if isinstance(user_or_error, dict) and "error" in user_or_error:
+                return user_or_error
 
-        if not user:
-            return {"error": "User not found"}
+            user = user_or_error
+            user.password_hash = generate_password_hash(new_password)
+            db.session.commit()
 
-        
-        return OTPService.send_forgot_password_otp(identifier)
+            return {"success": True, "message": "Password has been reset successfully."}
+
+        except Exception as e:
+            db.session.rollback()
+            return {"error": f"Internal server error: {str(e)}"}
+
+    # ================== FORGOT PASSWORD - PHONE ==================
+    @staticmethod
+    def request_forgot_password_phone(phone: str):
+        """
+        Gửi OTP phục hồi mật khẩu qua số điện thoại.
+        """
+        try:
+            user = User.query.filter_by(phone=phone).first()
+            if not user:
+                return {"error": "User not found"}
+
+            return OTPService.send_phone_otp(phone, purpose="verify")
+
+        except Exception as e:
+            return {"error": f"Internal server error: {str(e)}"}
 
     @staticmethod
-    def reset_password(identifier: str, otp_code: str, new_password: str):
+    def reset_password_phone(phone: str, otp_code: str, new_password: str):
         """
-        Xác thực OTP và cập nhật mật khẩu mới.
-        identifier: email hoặc phone
+        Xác thực OTP và cập nhật mật khẩu mới qua phone.
         """
-        # 1) Verify OTP
-        user_or_error = OTPService.verify_forgot_password_otp(identifier, otp_code)
-        if isinstance(user_or_error, dict) and "error" in user_or_error:
-            return user_or_error
+        try:
+            user_or_error = OTPService.verify_phone_otp(phone, otp_code=otp_code, purpose="verify")
+            if isinstance(user_or_error, dict) and "error" in user_or_error:
+                return user_or_error
 
-        user = user_or_error
+            user = user_or_error
+            user.password_hash = generate_password_hash(new_password)
+            db.session.commit()
 
-        # 2) Update password
-        from werkzeug.security import generate_password_hash
-        user.password_hash = generate_password_hash(new_password)
+            return {"success": True, "message": "Password has been reset successfully."}
 
-        db.session.commit()
-
-        return {
-            "success": True,
-            "message": "Password has been reset successfully."
-        }
+        except Exception as e:
+            db.session.rollback()
+            return {"error": f"Internal server error: {str(e)}"}

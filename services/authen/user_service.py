@@ -286,3 +286,4 @@ class UserService:
         except Exception as e:
             db.session.rollback()
             return response_error(f"Change password failed: {str(e)}", HttpCode.internal_server_error)
+

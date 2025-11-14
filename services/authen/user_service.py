@@ -1,35 +1,59 @@
-import datetime
+import sys
+from flask import Blueprint, request, jsonify
 from helper.normalization_response import response_error, response_success
 from models.user import User
+from models.user_role import UserRole
 from database import db
 from type.http_constants import HttpCode
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError 
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from sqlalchemy import or_
 
 try:
     from werkzeug.security import generate_password_hash
 except ImportError:
     def generate_password_hash(password):
+        # Fallback (hoặc logger) nếu werkzeug không có sẵn
+        print("CẢNH BÁO: werkzeug.security không được cài đặt. Mật khẩu không được hash.", file=sys.stderr)
         return password
 
-
+# =======================================================================
+# == FILE 2: USER SERVICE (LOGIC NGHIỆP VỤ)
+# =======================================================================
 
 class UserService:
 
-    # =============== GET ALL USERS ===============
-    # (Giữ nguyên hàm get_all_users)
+    # =============== GET ALL USERS (ĐÃ SỬA) ===============
     @staticmethod
-    def get_all_users(page=1, limit=20, keyword=""):
+    def get_all_users(page=1, limit=20, search=None, is_active=None, role_id=None):
         try:
             query = User.query
-            if keyword:
-                keyword_like = f"%{keyword}%"
+
+            # SỬA ĐỔI: Logic lọc theo 'search' (thay vì keyword)
+            if search:
+                search_like = f"%{search}%"
                 query = query.filter(
-                    (User.username.ilike(keyword_like)) |
-                    (User.email.ilike(keyword_like)) |
-                    (User.phone.ilike(keyword_like))
+                    or_(
+                        (User.username.ilike(search_like)),
+                        (User.email.ilike(search_like)),
+                        (User.phone.ilike(search_like))
+                    )
+                )
+            
+            # THÊM MỚI: Logic lọc theo trạng thái
+            if is_active is not None:
+                query = query.filter(User.is_active == is_active)
+            
+            # THÊM MỚI: Logic lọc theo vai trò
+            if role_id is not None:
+                # Join với bảng UserRole và lọc
+                query = query.join(UserRole, User.id == UserRole.user_id).filter(
+                    UserRole.role_id == role_id
                 )
 
+            # Đếm tổng số lượng (sau khi lọc)
             total = query.count()
+            
+            # Phân trang và sắp xếp
             users = (
                 query.order_by(User.id.desc())
                 .offset((page - 1) * limit)
@@ -54,12 +78,9 @@ class UserService:
 
 
     # =============== GET USER BY ID ===============
-    # (Giữ nguyên hàm get_user_by_id)
     @staticmethod
     def get_user_by_id(user_id: int, include_roles: bool = False):
         try:
-            if user_id is None:
-                return response_error("User ID is required", HttpCode.bad_request)
             user = User.query.get(user_id)
             if not user:
                 return response_error("User not found", HttpCode.not_found)
@@ -75,7 +96,6 @@ class UserService:
 
 
     # =============== GET USER BY USERNAME ===============
-    # (Giữ nguyên hàm get_user_by_username)
     @staticmethod
     def get_user_by_username(username: str, include_roles: bool = False):
         try:
@@ -94,7 +114,6 @@ class UserService:
 
 
     # =============== FILTER USERS BY ACTIVE STATUS ===============
-    # (Giữ nguyên hàm get_users_by_active)
     @staticmethod
     def get_users_by_active(is_active: bool, include_roles: bool = False):
         try:
@@ -117,7 +136,6 @@ class UserService:
 
 
     # =============== CREATE USER ===============
-    # (Giữ nguyên hàm create_user)
     @staticmethod
     def create_user(data):
         try:
@@ -145,8 +163,14 @@ class UserService:
 
         except IntegrityError as e:
             db.session.rollback()
-            # ... (Giữ nguyên xử lý lỗi)
-            return response_error(f"Duplicate entry error: {str(e.orig)}", HttpCode.bad_request)
+            error_message = str(e.orig).lower()
+            if "user.username" in error_message:
+                return response_error("Username already exists", HttpCode.bad_request)
+            if "user.email" in error_message:
+                return response_error("Email already exists", HttpCode.bad_request)
+            if "user.phone" in error_message:
+                return response_error("Phone already exists", HttpCode.bad_request)
+            return response_error(f"Duplicate entry error: {error_message}", HttpCode.bad_request)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -164,23 +188,9 @@ class UserService:
             if not user:
                 return response_error("User not found", HttpCode.not_found)
 
-            # === BẮT ĐẦU SỬA ĐỔI ===
-            # Liệt kê các trường được phép cập nhật
-            allowed_fields = [
-                "username", 
-                "email", 
-                "phone", 
-                "display_name",
-                "address",        # Thêm mới
-                "vehicle_name",   # Thêm mới
-                "license_plate"   # Thêm mới
-            ]
-
-            for key in allowed_fields:
-                # Kiểm tra `is not None` để cho phép cập nhật giá trị rỗng ("")
-                if key in data and data[key] is not None:
+            for key in ["username", "email", "phone", "display_name"]:
+                if key in data and data[key]:
                     setattr(user, key, data[key])
-            # === KẾT THÚC SỬA ĐỔI ===
 
             db.session.commit()
             
@@ -191,8 +201,14 @@ class UserService:
 
         except IntegrityError as e:
             db.session.rollback()
-            # ... (Giữ nguyên xử lý lỗi)
-            return response_error(f"Duplicate entry error: {str(e.orig)}", HttpCode.bad_request)
+            error_message = str(e.orig).lower()
+            if "user.username" in error_message:
+                return response_error("Username already exists", HttpCode.bad_request)
+            if "user.email" in error_message:
+                return response_error("Email already exists", HttpCode.bad_request)
+            if "user.phone" in error_message:
+                return response_error("Phone already exists", HttpCode.bad_request)
+            return response_error(f"Duplicate entry error: {error_message}", HttpCode.bad_request)
 
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -203,7 +219,6 @@ class UserService:
 
 
     # =============== DELETE USER ===============
-    # (Giữ nguyên hàm delete_user)
     @staticmethod
     def delete_user(user_id):
         try:
@@ -224,7 +239,6 @@ class UserService:
 
 
     # =============== TOGGLE USER STATUS ===============
-    # (Giữ nguyên hàm toggle_status)
     @staticmethod
     def toggle_status(user_id, data):
         try:
@@ -251,48 +265,48 @@ class UserService:
             return response_error(f"Toggle status failed: {str(e)}", HttpCode.internal_server_error)
 
 
-    # =============== CHANGE PASSWORD ===============
-    # (Giữ nguyên hàm change_password)
-    @staticmethod
-    def change_password(user_id, data):
-        try:
-            user = User.query.get(user_id)
-            if not user:
-                return response_error("User not found", HttpCode.not_found)
+# =======================================================================
+# == FILE 1: USER BLUEPRINT (CONTROLLER / ROUTES)
+# =======================================================================
 
-            old_password = data.get("old_password")
-            new_password = data.get("new_password")
+user_bp = Blueprint("user_bp", __name__, url_prefix="/users")
 
-            if not old_password or not new_password:
-                return response_error("Missing required fields", HttpCode.bad_request)
+# ================== LIST ==================
+# ================== LIST (ĐÃ SỬA) ==================
+@user_bp.route("/list", methods=["GET"])
+def list_users():
+    try:
+        # Đọc các tham số cơ bản
+        page = int(request.args.get("page", 1))
+        limit = int(request.args.get("limit", 20))
+        
+        # SỬA ĐỔI: Đọc các tham số lọc mới
+        search = request.args.get("search", None) # Đổi từ keyword -> search
+        is_active_str = request.args.get("is_active", None)
+        role_id = request.args.get("role_id", None, type=int)
 
-            # Kiểm tra mật khẩu cũ
-            from werkzeug.security import check_password_hash
-            if not check_password_hash(user.password_hash, old_password):
-                return response_error("Old password is incorrect", HttpCode.bad_request)
+        # Chuyển đổi 'is_active' từ string ('true'/'false') sang boolean
+        is_active = None
+        if is_active_str == 'true':
+            is_active = True
+        elif is_active_str == 'false':
+            is_active = False
 
-            # Không cho phép đổi sang mật khẩu cũ (optional)
-            if check_password_hash(user.password_hash, new_password):
-                return response_error("New password must be different from old password", HttpCode.bad_request)
+        # SỬA ĐỔI: Truyền tất cả tham số vào service
+        result = UserService.get_all_users(
+            page=page, 
+            limit=limit, 
+            search=search, 
+            is_active=is_active, 
+            role_id=role_id
+        )
+        
+        return jsonify(result), result.get("code", HttpCode.success)
+    except Exception as e:
+        return jsonify(response_error(
+            message=f"Internal server error: {e}",
+            code=HttpCode.internal_server_error
+        )), HttpCode.internal_server_error
 
-            # Hash mật khẩu mới
-            user.password_hash = generate_password_hash(new_password)
-
-            db.session.commit()
-
-            return response_success(
-                {"id": user_id},
-                message="Password changed successfully"
-            )
-
-        except IntegrityError as e:
-            db.session.rollback()
-            return response_error(f"Integrity error: {str(e.orig)}", HttpCode.bad_request)
-
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            return response_error(f"Database error: {str(e)}", HttpCode.internal_server_error)
-
-        except Exception as e:
-            db.session.rollback()
-            return response_error(f"Change password failed: {str(e)}", HttpCode.internal_server_error)
+# Lưu ý: Các route khác (create, update, delete, v.v.) không có trong file 1 bạn
+# cung cấp nên không được đưa vào file gộp này.

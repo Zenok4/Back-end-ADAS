@@ -11,6 +11,8 @@ from database import get_mysql_connection
 from endpoints.authen_enpoints import authen_bp
 from endpoints.author_enpoints import author_bp
 from endpoints.usermanage_endpoints import user_bp
+from endpoints.sign_endpoints import sign_bp
+from endpoints.drowsy_endpoints import drowsy_bp 
 from models import init_dtb
 
 app = Flask(__name__)
@@ -24,6 +26,8 @@ CORS(app, supports_credentials=True)
 app.register_blueprint(authen_bp, url_prefix="/authen")
 app.register_blueprint(author_bp, url_prefix="/author")
 app.register_blueprint(user_bp, url_prefix="/users")
+app.register_blueprint(sign_bp, url_prefix="/sign")
+app.register_blueprint(drowsy_bp, url_prefix="/drowsy")
 
 
 # ========== TEST Connection ==========
@@ -38,7 +42,8 @@ def test_connection():
         return {"status": "success", "message": "Database connections successful!"}
     except Exception as e:
         return {"status": "failed", "error": str(e)}
-    
+
+
 @app.route("/test-connection", methods=["GET"])
 def test_connection_api():
     """
@@ -53,32 +58,40 @@ def test_connection_api():
 init_dtb(app)
 
 
-
 ############################################
 # ========== Logging ==========
 # Logging middleware khi request và response
 @app.before_request
 def log_request():
     request.start_time = time.time()
-    logger.info(f"[REQUEST] {request.method} {request.path} - IP: {request.remote_addr}")
+    logger.info(
+        f"[REQUEST] {request.method} {request.path} - IP: {request.remote_addr}"
+    )
+
 
 @app.after_request
 def log_response(response):
     duration = round(time.time() - request.start_time, 3)
-    logger.info(f"[RESPONSE] {request.method} {request.path} - Status: {response.status_code} - Time: {duration}s")
+    logger.info(
+        f"[RESPONSE] {request.method} {request.path} - Status: {response.status_code} - Time: {duration}s"
+    )
     return response
+
 
 @app.errorhandler(Exception)
 def handle_exception(e):
     if isinstance(e, HTTPException):
         # lỗi HTTP custom, log message luôn
-        logger.error(f"[CUSTOM ERROR] {request.method} {request.path} - {e.description}")
+        logger.error(
+            f"[CUSTOM ERROR] {request.method} {request.path} - {e.description}"
+        )
         return {"error": e.description}, e.code
     else:
         # lỗi hệ thống
         logger.error(f"[SYSTEM ERROR] {request.method} {request.path} - {str(e)}")
         return {"error": "Internal Server Error"}, HttpCode.internal_server_error
-    
+
+
 ############################################
 # Chạy ứng dụng
 if __name__ == "__main__":

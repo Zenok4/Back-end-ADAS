@@ -3,10 +3,12 @@ from models.role import Role
 from models.user_role import UserRole
 from helper.normalization_response import response_error, response_success
 from type.http_constants import HttpCode
+from sqlalchemy import exc
 
 
 class RoleService:
 
+    # =============== LIST ALL ROLES ===============
     @staticmethod
     #Thêm phân trang
     #Thêm tổng số roles
@@ -63,12 +65,10 @@ class RoleService:
             db.session.rollback()
             return response_error(f"Failed to list roles: {str(e)}", HttpCode.internal_server_error)
 
+
+    # =============== GET ROLE BY ID ===============
     @staticmethod
     def get_role_by_id(role_id: int, include_permissions: bool = False):
-        """
-        Lấy thông tin chi tiết 1 role theo id.
-        Nếu include_permissions=True => trả kèm danh sách permission.
-        """
         try:
             role = Role.query.get(role_id)
             if not role:
@@ -82,12 +82,10 @@ class RoleService:
         except Exception as e:
             return response_error(f"Failed to get role: {str(e)}", HttpCode.internal_server_error)
 
+
+    # =============== GET ROLE BY NAME ===============
     @staticmethod
     def get_role_by_name(name: str, include_permissions: bool = False):
-        """
-        Lấy thông tin chi tiết 1 role theo tên.
-        Nếu include_permissions=True => trả kèm danh sách permission.
-        """
         try:
             role = Role.query.filter_by(name=name).first()
             if not role:
@@ -101,6 +99,8 @@ class RoleService:
         except Exception as e:
             return response_error(f"Failed to get role: {str(e)}", HttpCode.internal_server_error)
 
+
+    # =============== CREATE ROLE ===============
     @staticmethod
     def create_role(name: str, description: str = None, is_active: bool = True, level: int = 1):
         try:
@@ -112,6 +112,8 @@ class RoleService:
             db.session.rollback()
             return response_error(f"Create role failed: {str(e)}", HttpCode.internal_server_error)
 
+
+    # =============== UPDATE ROLE ===============
     @staticmethod
     def update_role(role_id: int, **kwargs):
         try:
@@ -120,7 +122,7 @@ class RoleService:
                 return response_error("Role not found", HttpCode.not_found)
 
             for key, value in kwargs.items():
-                if hasattr(role, key):  # tránh set field không hợp lệ
+                if hasattr(role, key):
                     setattr(role, key, value)
 
             db.session.commit()
@@ -129,6 +131,8 @@ class RoleService:
             db.session.rollback()
             return response_error(f"Update failed: {str(e)}", HttpCode.internal_server_error)
 
+
+    # =============== DELETE ROLE ===============
     @staticmethod
     def delete_role(role_id: int):
         try:
@@ -143,11 +147,10 @@ class RoleService:
             db.session.rollback()
             return response_error(f"Delete failed: {str(e)}", HttpCode.internal_server_error)
 
+
+    # =============== GET USER ROLES ===============
     @staticmethod
     def get_user_roles(user_id: int, include_permissions: bool = False):
-        """
-        Trả về danh sách role mà user có.
-        """
         try:
             roles = (
                 db.session.query(Role)
@@ -157,39 +160,43 @@ class RoleService:
             )
             if not roles:
                 return response_success([], key="roles", message="User has no roles")
-            return response_success([r.to_dict(include_permissions=include_permissions) for r in roles], key="roles")
+            return response_success(
+                [r.to_dict(include_permissions=include_permissions) for r in roles],
+                key="roles"
+            )
         except Exception as e:
             return response_error(f"Failed to get user roles: {str(e)}", HttpCode.internal_server_error)
 
+
+    # =============== ASSIGN ROLES TO USER ===============
     @staticmethod
     def assign_roles_to_user(user_id: int, role_ids: list[int]):
-        """
-        Gán nhiều roles cho 1 user.
-        """
         try:
-            if not role_ids or not isinstance(role_ids, list):
-                return response_error("role_ids must be a non-empty list", HttpCode.bad_request)
+            if not isinstance(role_ids, list):
+                return response_error("role_ids must be a list", HttpCode.bad_request)
 
-            # Kiểm tra roles tồn tại
-            roles = Role.query.filter(Role.id.in_(role_ids)).all()
-            if not roles:
-                return response_error("No valid roles found", HttpCode.not_found)
-
+            UserRole.query.filter_by(user_id=user_id).delete()
             assigned_roles = []
-            for role in roles:
-                # Kiểm tra xem user đã có role này chưa
-                existing = UserRole.query.filter_by(user_id=user_id, role_id=role.id).first()
-                if not existing:
-                    user_role = UserRole(user_id=user_id, role_id=role.id)
-                    db.session.add(user_role)
-                    assigned_roles.append(role.to_dict())
+
+            if role_ids:
+                roles = Role.query.filter(Role.id.in_(role_ids)).all()
+                valid_role_ids = {r.id for r in roles}
+
+                for role_id in role_ids:
+                    if role_id in valid_role_ids:
+                        user_role = UserRole(user_id=user_id, role_id=role_id)
+                        db.session.add(user_role)
+                        assigned_roles.append(
+                            next(r.to_dict() for r in roles if r.id == role_id)
+                        )
 
             db.session.commit()
 
-            if not assigned_roles:
-                return response_success([], key="assigned_roles", message="User already has all these roles")
-
-            return response_success(assigned_roles, key="assigned_roles", message="Roles assigned successfully")
+            return response_success(
+                assigned_roles,
+                key="assigned_roles",
+                message="Roles synchronized successfully"
+            )
         except Exception as e:
             db.session.rollback()
             return response_error(f"Failed to assign roles: {str(e)}", HttpCode.internal_server_error)

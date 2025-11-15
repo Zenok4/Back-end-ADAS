@@ -15,7 +15,7 @@ from endpoints.author_enpoints import author_bp
 from endpoints.usermanage_endpoints import user_bp
 from endpoints.sign_endpoints import sign_bp
 from endpoints.drowsy_endpoints import drowsy_bp 
-from endpoints.profile_endpoints import profile_bp  # <-- 1. THÊM DÒNG NÀY
+from endpoints.profile_endpoints import profile_bp 
 
 from models import init_dtb
 

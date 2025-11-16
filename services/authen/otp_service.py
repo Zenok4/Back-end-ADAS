@@ -100,3 +100,38 @@ class OTPService:
     def _send_email(email, otp_code):
         # thực tế sẽ gửi email qua API SMTP / SendGrid / etc
         print(f"Send OTP {otp_code} to email {email}")
+
+    
+    # ==================================================
+    #            FORGOT PASSWORD SUPPORT
+    # ==================================================
+    @staticmethod
+    def send_forgot_password_otp(identifier: str):
+        """
+        Gửi OTP reset password qua email hoặc phone.
+        identifier: email hoặc phone
+        """
+        if "@" in identifier:
+            return OTPService.send_email_otp(identifier, purpose="verify")
+        else:
+            return OTPService.send_phone_otp(identifier, purpose="verify")
+
+    @staticmethod
+    def verify_forgot_password_otp(identifier: str, otp_code: str):
+        """
+        Xác thực OTP reset password.
+        Trả về user nếu đúng.
+        """
+        if "@" in identifier:
+            return OTPService.verify_email_otp(
+                identifier,
+                otp_code,
+                purpose="verify"
+            )
+        else:
+            return OTPService.verify_phone_otp(
+                identifier,
+                otp_code,
+                purpose="verify"
+            )
+

@@ -59,7 +59,7 @@ pip freeze > requirements.txt
 ```
 
 
-**Generated:** 2025-11-05 15:55:58
+**Generated:** 2025-11-14 15:12:49
 
 ## 📂 Cấu trúc thư mục
 
@@ -91,10 +91,14 @@ backend/
 
 ## 🌐 API Endpoints
 
-_39 endpoint(s) found._
+_44 endpoint(s) found._
 
 | Method(s) | Path | Function | File | Description |
 |-----------|------|----------|------|-------------|
+| POST | `/authen/forgot-password/email/reset` | `forgot_password_email_reset()` | `endpoints\authen_enpoints.py` | Reset mật khẩu qua email. |
+| POST | `/authen/forgot-password/email/send-otp` | `forgot_password_email_send_otp()` | `endpoints\authen_enpoints.py` | Gửi OTP phục hồi mật khẩu qua email. |
+| POST | `/authen/forgot-password/phone/reset` | `forgot_password_phone_reset()` | `endpoints\authen_enpoints.py` | Reset mật khẩu qua số điện thoại. |
+| POST | `/authen/forgot-password/phone/send-otp` | `forgot_password_phone_send_otp()` | `endpoints\authen_enpoints.py` | Gửi OTP phục hồi mật khẩu qua số điện thoại. |
 | POST | `/authen/login/email` | `login_email()` | `endpoints\authen_enpoints.py` | Đăng nhập bằng email + password + (OTP nếu có). |
 | POST | `/authen/login/email/otp` | `request_email_otp()` | `endpoints\authen_enpoints.py` | Gửi OTP về email để xác thực. |
 | POST | `/authen/login/phone/otp` | `request_phone_otp()` | `endpoints\authen_enpoints.py` | Gửi OTP về số điện thoại để đăng nhập. |
@@ -126,14 +130,15 @@ _39 endpoint(s) found._
 | POST | `/detect` | `detect_drowsiness()` | `endpoints\drowsy_endpoints.py` |  |
 | POST | `/predict` | `sign_predict()` | `endpoints\sign_endpoints.py` | Endpoint nhận diện biển báo giao thông. |
 | GET | `/test-connection` | `test_connection_api()` | `app.py` | Kiểm tra kết nối giữa server và database |
-| GET | `/users/active/<string:is_active>` | `list_users_by_active()` | `endpoints\usermanage_endpoints.py` |  |
-| POST | `/users/create` | `create_user()` | `endpoints\usermanage_endpoints.py` |  |
-| DELETE | `/users/delete/<int:user_id>` | `delete_user()` | `endpoints\usermanage_endpoints.py` |  |
-| GET | `/users/id/<int:user_id>` | `get_user_detail()` | `endpoints\usermanage_endpoints.py` |  |
-| GET | `/users/list` | `list_users()` | `endpoints\usermanage_endpoints.py` |  |
-| PATCH | `/users/status/<int:user_id>` | `toggle_user_status()` | `endpoints\usermanage_endpoints.py` |  |
-| PUT | `/users/update/<int:user_id>` | `update_user()` | `endpoints\usermanage_endpoints.py` |  |
-| GET | `/users/username/<string:username>` | `get_user_by_username()` | `endpoints\usermanage_endpoints.py` |  |
+| GET | `/users/active/<string:is_active>` | `list_users_by_active()` | `endpoints\usermanage_endpoints.py` | Lọc danh sách người dùng theo trạng thái hoạt động. |
+| PATCH | `/users/change-password/<int:user_id>` | `change_password()` | `endpoints\usermanage_endpoints.py` | Đổi mật khẩu của người dùng. |
+| POST | `/users/create` | `create_user()` | `endpoints\usermanage_endpoints.py` | Tạo mới một người dùng. |
+| DELETE | `/users/delete/<int:user_id>` | `delete_user()` | `endpoints\usermanage_endpoints.py` | Xóa một người dùng theo ID. |
+| GET | `/users/id/<int:user_id>` | `get_user_detail()` | `endpoints\usermanage_endpoints.py` | Lấy thông tin chi tiết người dùng theo ID. |
+| GET | `/users/list` | `list_users()` | `endpoints\usermanage_endpoints.py` | Lấy danh sách người dùng (có phân trang + tìm kiếm). |
+| PATCH | `/users/status/<int:user_id>` | `toggle_user_status()` | `endpoints\usermanage_endpoints.py` | Thay đổi trạng thái hoạt động của người dùng (active / inactive). |
+| PUT | `/users/update/<int:user_id>` | `update_user()` | `endpoints\usermanage_endpoints.py` | Cập nhật thông tin người dùng. |
+| GET | `/users/username/<string:username>` | `get_user_by_username()` | `endpoints\usermanage_endpoints.py` | Lấy thông tin người dùng theo username. |
 
 ---
 

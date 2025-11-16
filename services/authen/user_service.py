@@ -56,6 +56,8 @@ class UserService:
     @staticmethod
     def get_user_by_id(user_id: int, include_roles: bool = False):
         try:
+            if user_id is None:
+                return response_error("User ID is required", HttpCode.bad_request)
             user = User.query.get(user_id)
             if not user:
                 return response_error("User not found", HttpCode.not_found)
@@ -238,3 +240,50 @@ class UserService:
         except Exception as e:
             db.session.rollback()
             return response_error(f"Toggle status failed: {str(e)}", HttpCode.internal_server_error)
+
+
+    # =============== CHANGE PASSWORD ===============
+    @staticmethod
+    def change_password(user_id, data):
+        try:
+            user = User.query.get(user_id)
+            if not user:
+                return response_error("User not found", HttpCode.not_found)
+
+            old_password = data.get("old_password")
+            new_password = data.get("new_password")
+
+            if not old_password or not new_password:
+                return response_error("Missing required fields", HttpCode.bad_request)
+
+            # Kiểm tra mật khẩu cũ
+            from werkzeug.security import check_password_hash
+            if not check_password_hash(user.password_hash, old_password):
+                return response_error("Old password is incorrect", HttpCode.bad_request)
+
+            # Không cho phép đổi sang mật khẩu cũ (optional)
+            if check_password_hash(user.password_hash, new_password):
+                return response_error("New password must be different from old password", HttpCode.bad_request)
+
+            # Hash mật khẩu mới
+            user.password_hash = generate_password_hash(new_password)
+
+            db.session.commit()
+
+            return response_success(
+                {"id": user_id},
+                message="Password changed successfully"
+            )
+
+        except IntegrityError as e:
+            db.session.rollback()
+            return response_error(f"Integrity error: {str(e.orig)}", HttpCode.bad_request)
+
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return response_error(f"Database error: {str(e)}", HttpCode.internal_server_error)
+
+        except Exception as e:
+            db.session.rollback()
+            return response_error(f"Change password failed: {str(e)}", HttpCode.internal_server_error)
+

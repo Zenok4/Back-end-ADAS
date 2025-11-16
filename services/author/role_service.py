@@ -102,8 +102,17 @@ class RoleService:
 
     # =============== CREATE ROLE ===============
     @staticmethod
-    def create_role(name: str, description: str = None, is_active: bool = True, level: int = 1):
+    def create_role(name: str, description: str = None, is_active: bool = True, level: int = 1, current_user_level: int = 0):
         try:
+            # === LOGIC BẢO MẬT ===
+            # Level của role sắp tạo phải nhỏ hơn level của người tạo
+            if level >= current_user_level:
+                return response_error(
+                    f"Cannot create role with level ({level}) higher than or equal to your own level ({current_user_level})", 
+                    HttpCode.forbidden
+                )
+            # =================================
+
             role = Role(name=name, description=description, is_active=is_active, level=level)
             db.session.add(role)
             db.session.commit()
@@ -115,15 +124,32 @@ class RoleService:
 
     # =============== UPDATE ROLE ===============
     @staticmethod
-    def update_role(role_id: int, **kwargs):
+    def update_role(role_id: int,current_user_level: int = 0, **kwargs):
+
         try:
             role = Role.query.get(role_id)
             if not role:
                 return response_error("Role not found", HttpCode.not_found)
 
+            # === LOGIC BẢO MẬT ===
+            # 1. Không cho phép sửa role có level cao hơn hoặc bằng mình
+            if role.level > current_user_level:
+                return response_error(
+                    f"Cannot update role ({role.name}) because their level ({role.level}) is equal to or higher than your own ({current_user_level})", 
+                    HttpCode.forbidden
+                )
+            
+            # 2. Không cho phép gán level mới cao hơn hoặc bằng level của mình
+            if 'level' in kwargs and kwargs['level'] >= current_user_level:
+                 return response_error(
+                    f"Cannot assign new level ({kwargs['level']}) higher than or equal to your own level ({current_user_level})", 
+                    HttpCode.forbidden
+                )
+            # =================================
+
             for key, value in kwargs.items():
                 if hasattr(role, key):
-                    setattr(role, key, value)
+                    setattr(role, key, value) 
 
             db.session.commit()
             return response_success(role.to_dict(), key="role", message="Role updated")
@@ -134,11 +160,20 @@ class RoleService:
 
     # =============== DELETE ROLE ===============
     @staticmethod
-    def delete_role(role_id: int):
+    def delete_role(role_id: int, current_user_level: int = 0):
         try:
             role = Role.query.get(role_id)
             if not role:
                 return response_error("Role not found", HttpCode.not_found)
+
+            # === LOGIC BẢO MẬT  ===
+            # Không cho phép xóa role có level cao hơn hoặc bằng mình
+            if role.level >= current_user_level:
+                 return response_error(
+                    f"Cannot delete role ({role.name}) because their level ({role.level}) is equal to or higher than your own level ({current_user_level})", 
+                    HttpCode.forbidden
+                )
+            # =================================
 
             db.session.delete(role)
             db.session.commit()

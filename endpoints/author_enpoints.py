@@ -4,8 +4,12 @@ from flask import Blueprint, request, jsonify
 from middlewares.error_handler import handle_exceptions
 from services.author.role_service import RoleService
 from services.author.permission_service import PermissionService
+from helper.check_constraints_roles import get_current_user_highest_level
 from type.http_constants import HttpCode
 from helper.normalization_response import response_error
+from models.role import Role
+from flask_jwt_extended import get_jwt_identity, jwt_required
+from models.user import User
 
 author_bp = Blueprint("author", __name__, url_prefix="/author")
 
@@ -102,6 +106,8 @@ def get_role_by_name():
     result = RoleService.get_role_by_name(name, include_permissions=is_list_permissions)
     return jsonify(result), result.get("code", HttpCode.success)
 
+
+
 @author_bp.route("/roles/create", methods=["POST"])
 def create_role():
     """
@@ -117,12 +123,20 @@ def create_role():
     is_active = data.get("is_active", True)
     level = data.get("level", 1)
 
-    if not name:
-        return jsonify(
-            response_error(message="Role name required", code=HttpCode.bad_request)
-        ), HttpCode.bad_request
+    data = request.get_json() or {}
+    # Lấy level của người dùng hiện tại
+    current_level = data.get("current_user_level", get_current_user_highest_level())
 
-    result = RoleService.create_role(name, description, is_active, level)
+    if not name:
+        return jsonify(response_error(message="Role name is required", code=HttpCode.bad_request)), HttpCode.bad_request
+    
+    result = RoleService.create_role(
+        name,
+        description,
+        level,
+        is_active,
+        current_user_level=current_level # Truyền level vào service
+    )
     return jsonify(result), result.get("code", HttpCode.created)
 
 
@@ -135,13 +149,17 @@ def update_role(role_id):
     - Input JSON: { "name": "...", "description": "...", "level": int, "is_active": boolean } (có thể partial)
     - Trả về: { success: true, message: string, code: int, role: {...} }
     """
-    data = request.get_json(silent=True) or {}
-    if not data:
-        return jsonify(
-            response_error(message="No update data provided", code=HttpCode.bad_request)
-        ), HttpCode.bad_request
 
-    result = RoleService.update_role(role_id, **data)
+    data = request.get_json() or {}
+    current_level = data.get("current_user_level", get_current_user_highest_level())
+    if "current_user_level" in data:
+        data.pop("current_user_level")
+
+    result = RoleService.update_role(
+        role_id=role_id, 
+        current_user_level=current_level, # Truyền level vào service
+        **data
+    )
     return jsonify(result), result.get("code", HttpCode.success)
 
 
@@ -153,8 +171,14 @@ def delete_role(role_id):
     - URL: /author/roles/<role_id>/delete
     - Trả về: { success: true, message: string, code: int, deleted: { id: <role_id> } }
     """
-    result = RoleService.delete_role(role_id)
+    current_level = request.args.get("current_user_level", type=int, default=get_current_user_highest_level())
+
+    result = RoleService.delete_role(
+        role_id=role_id, 
+        current_user_level=current_level # Truyền level vào service
+    )
     return jsonify(result), result.get("code", HttpCode.success)
+
 
 
 @author_bp.route("/users/<int:user_id>/roles/list", methods=["GET"])

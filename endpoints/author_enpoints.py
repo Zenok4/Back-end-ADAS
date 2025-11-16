@@ -4,9 +4,12 @@ from flask import Blueprint, request, jsonify
 from middlewares.error_handler import handle_exceptions
 from services.author.role_service import RoleService
 from services.author.permission_service import PermissionService
+from helper.check_constraints_roles import get_current_user_highest_level
 from type.http_constants import HttpCode
 from helper.normalization_response import response_error
 from models.role import Role
+from flask_jwt_extended import get_jwt_identity, jwt_required
+from models.user import User
 
 author_bp = Blueprint("author", __name__, url_prefix="/author")
 
@@ -103,13 +106,6 @@ def get_role_by_name():
     result = RoleService.get_role_by_name(name, include_permissions=is_list_permissions)
     return jsonify(result), result.get("code", HttpCode.success)
 
-def get_current_user_level():
-    """
-    Lấy level cao nhất của user đang đăng nhập từ JWT token.
-    Đây là bước bảo mật phía server.
-    Trả về 0 nếu không xác thực hoặc không có quyền.
-    """
-    return 5
 
 
 @author_bp.route("/roles/create", methods=["POST"])
@@ -127,18 +123,20 @@ def create_role():
     is_active = data.get("is_active", True)
     level = data.get("level", 1)
 
-    if not name:
-        return jsonify(
-            response_error(message="Role name required", code=HttpCode.bad_request)
-        ), HttpCode.bad_request
-    
-    current_level = get_current_user_level()
-    if level > current_level:
-        return jsonify(
-            response_error(message="Không thể tạo role với level ({level}) cao hơn level của bạn ({current_level})", code=HttpCode.forbidden)
-        ), HttpCode.forbidden
+    data = request.get_json() or {}
+    # Lấy level của người dùng hiện tại
+    current_level = data.get("current_user_level", get_current_user_highest_level())
 
-    result = RoleService.create_role(name, description, is_active, level)
+    if not name:
+        return jsonify(response_error(message="Role name is required", code=HttpCode.bad_request)), HttpCode.bad_request
+    
+    result = RoleService.create_role(
+        name,
+        description,
+        level,
+        is_active,
+        current_user_level=current_level # Truyền level vào service
+    )
     return jsonify(result), result.get("code", HttpCode.created)
 
 
@@ -151,29 +149,17 @@ def update_role(role_id):
     - Input JSON: { "name": "...", "description": "...", "level": int, "is_active": boolean } (có thể partial)
     - Trả về: { success: true, message: string, code: int, role: {...} }
     """
-    data = request.get_json(silent=True) or {}
-    if not data:
-        return jsonify(
-            response_error(message="No update data provided", code=HttpCode.bad_request)
-        ), HttpCode.bad_request
-    current_level = get_current_user_level()
-    # 1. Kiểm tra xem user có quyền sửa role này không (không thể sửa role cao hơn mình)
-    role_to_edit = Role.query.get(role_id)
-    if not role_to_edit:
-        return jsonify(
-            response_error(message="Role not found", code=HttpCode.not_found)
-        ), HttpCode.not_found
-    # Giả sử role.level đã có trong model
-    if hasattr(role_to_edit, 'level') and role_to_edit.level > current_level:
-        return jsonify(
-            response_error(message=f"Không thể sửa role ({role_to_edit.name}) vì level của họ ({role_to_edit.level}) cao hơn bạn ({current_level})", code=HttpCode.forbidden)
-        ), HttpCode.forbidden
-    # 2. Kiểm tra xem user có đang cố gán level mới cao hơn mình không
-    if 'level' in data and data['level'] > current_level:
-        return jsonify(
-            response_error(message=f"Không thể gán level ({data['level']}) cao hơn level của bạn ({current_level})", code=HttpCode.forbidden)
-        ), HttpCode.forbidden
-    result = RoleService.update_role(role_id, **data)
+
+    data = request.get_json() or {}
+    current_level = data.get("current_user_level", get_current_user_highest_level())
+    if "current_user_level" in data:
+        data.pop("current_user_level")
+
+    result = RoleService.update_role(
+        role_id=role_id, 
+        current_user_level=current_level, # Truyền level vào service
+        **data
+    )
     return jsonify(result), result.get("code", HttpCode.success)
 
 
@@ -185,8 +171,14 @@ def delete_role(role_id):
     - URL: /author/roles/<role_id>/delete
     - Trả về: { success: true, message: string, code: int, deleted: { id: <role_id> } }
     """
-    result = RoleService.delete_role(role_id)
+    current_level = request.args.get("current_user_level", type=int, default=get_current_user_highest_level())
+
+    result = RoleService.delete_role(
+        role_id=role_id, 
+        current_user_level=current_level # Truyền level vào service
+    )
     return jsonify(result), result.get("code", HttpCode.success)
+
 
 
 @author_bp.route("/users/<int:user_id>/roles/list", methods=["GET"])

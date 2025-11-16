@@ -123,7 +123,6 @@ def create_role():
     is_active = data.get("is_active", True)
     level = data.get("level", 1)
 
-    data = request.get_json() or {}
     # Lấy level của người dùng hiện tại
     current_level = data.get("current_user_level", get_current_user_highest_level())
 
@@ -133,8 +132,8 @@ def create_role():
     result = RoleService.create_role(
         name,
         description,
-        level,
         is_active,
+        level,
         current_user_level=current_level # Truyền level vào service
     )
     return jsonify(result), result.get("code", HttpCode.created)

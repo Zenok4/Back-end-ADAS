@@ -2,7 +2,6 @@ from flask import Blueprint, request, jsonify
 from services.ai.sign_service import SignService
 from helper.normalization_response import response_error
 from type.http_constants import HttpCode
-import imghdr
 
 sign_bp = Blueprint("sign", __name__)
 sign_service = SignService()
@@ -18,19 +17,17 @@ def sign_predict():
             )), HttpCode.bad_request
 
         base64_img = data["image_base64"]
-
         result = sign_service.predict_sign(base64_img)
 
+        # Nếu service trả lỗi
         if isinstance(result, dict) and result.get("error"):
-            return jsonify(response_error(
-                message=result["error"],
-                code=HttpCode.bad_gateway
-            )), HttpCode.bad_gateway
+            return jsonify(result), HttpCode.bad_gateway
 
-        return jsonify({
-            "code": HttpCode.success,
-            "data": result
-        }), HttpCode.success
+        # Trả trực tiếp mảng detections
+        # response_success trả ra dict kiểu: {"code":..., "message":..., "data": [...]}
+        # frontend chỉ cần res.data để lấy mảng
+        return jsonify(result), HttpCode.success
+
     except Exception as e:
         return jsonify(response_error(
             message=str(e),

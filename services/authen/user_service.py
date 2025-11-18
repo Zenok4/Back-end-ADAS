@@ -1,34 +1,59 @@
-import datetime
+import sys
+from flask import Blueprint, request, jsonify
 from helper.normalization_response import response_error, response_success
 from models.user import User
+from models.user_role import UserRole
 from database import db
 from type.http_constants import HttpCode
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError 
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+from sqlalchemy import or_
 
 try:
     from werkzeug.security import generate_password_hash
 except ImportError:
     def generate_password_hash(password):
+        # Fallback (hoặc logger) nếu werkzeug không có sẵn
+        print("CẢNH BÁO: werkzeug.security không được cài đặt. Mật khẩu không được hash.", file=sys.stderr)
         return password
 
-
+# =======================================================================
+# == FILE 2: USER SERVICE (LOGIC NGHIỆP VỤ)
+# =======================================================================
 
 class UserService:
 
-    # =============== GET ALL USERS ===============
+    # =============== GET ALL USERS (ĐÃ SỬA) ===============
     @staticmethod
-    def get_all_users(page=1, limit=20, keyword=""):
+    def get_all_users(page=1, limit=20, search=None, is_active=None, role_id=None):
         try:
             query = User.query
-            if keyword:
-                keyword_like = f"%{keyword}%"
+
+            # SỬA ĐỔI: Logic lọc theo 'search' (thay vì keyword)
+            if search:
+                search_like = f"%{search}%"
                 query = query.filter(
-                    (User.username.ilike(keyword_like)) |
-                    (User.email.ilike(keyword_like)) |
-                    (User.phone.ilike(keyword_like))
+                    or_(
+                        (User.username.ilike(search_like)),
+                        (User.email.ilike(search_like)),
+                        (User.phone.ilike(search_like))
+                    )
+                )
+            
+            # THÊM MỚI: Logic lọc theo trạng thái
+            if is_active is not None:
+                query = query.filter(User.is_active == is_active)
+            
+            # THÊM MỚI: Logic lọc theo vai trò
+            if role_id is not None:
+                # Join với bảng UserRole và lọc
+                query = query.join(UserRole, User.id == UserRole.user_id).filter(
+                    UserRole.role_id == role_id
                 )
 
+            # Đếm tổng số lượng (sau khi lọc)
             total = query.count()
+            
+            # Phân trang và sắp xếp
             users = (
                 query.order_by(User.id.desc())
                 .offset((page - 1) * limit)
@@ -56,8 +81,6 @@ class UserService:
     @staticmethod
     def get_user_by_id(user_id: int, include_roles: bool = False):
         try:
-            if user_id is None:
-                return response_error("User ID is required", HttpCode.bad_request)
             user = User.query.get(user_id)
             if not user:
                 return response_error("User not found", HttpCode.not_found)
@@ -286,4 +309,3 @@ class UserService:
         except Exception as e:
             db.session.rollback()
             return response_error(f"Change password failed: {str(e)}", HttpCode.internal_server_error)
-

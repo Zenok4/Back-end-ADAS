@@ -5,23 +5,46 @@ from helper.normalization_response import response_error
 
 user_bp = Blueprint("user_bp", __name__, url_prefix="/users")
 
-# ================== LIST ==================
+# ================== LIST (ĐÃ SỬA) ==================
 @user_bp.route("/list", methods=["GET"])
 def list_users():
     """
-    Lấy danh sách người dùng (có phân trang + tìm kiếm).
+    Lấy danh sách người dùng (có phân trang + lọc).
     - Query params:
         - page: số trang (mặc định 1)
         - limit: số dòng mỗi trang (mặc định 20)
-        - keyword: từ khóa tìm kiếm (username/email/phone)
+        - search: từ khóa tìm kiếm (username/email/phone)
+        - is_active: 'true' hoặc 'false' (lọc theo trạng thái)
+        - role_id: ID của role (lọc theo vai trò)
     - Trả về:
         { success, message, code, data: { users, page, limit, total } }
     """
     try:
+        # Đọc các tham số cơ bản
         page = int(request.args.get("page", 1))
         limit = int(request.args.get("limit", 20))
-        keyword = request.args.get("keyword", "")
-        result = UserService.get_all_users(page, limit, keyword)
+        
+        # SỬA ĐỔI: Đọc các tham số lọc mới
+        search = request.args.get("search", None) # Đổi từ keyword -> search
+        is_active_str = request.args.get("is_active", None)
+        role_id = request.args.get("role_id", None, type=int)
+
+        # Chuyển đổi 'is_active' từ string ('true'/'false') sang boolean
+        is_active = None
+        if is_active_str == 'true':
+            is_active = True
+        elif is_active_str == 'false':
+            is_active = False
+
+        # SỬA ĐỔI: Truyền tất cả tham số vào service
+        result = UserService.get_all_users(
+            page=page, 
+            limit=limit, 
+            search=search, 
+            is_active=is_active, 
+            role_id=role_id
+        )
+        
         return jsonify(result), result.get("code", HttpCode.success)
     except Exception as e:
         return jsonify(response_error(
@@ -184,6 +207,7 @@ def toggle_user_status(user_id):
             code=HttpCode.internal_server_error
         )), HttpCode.internal_server_error
 
+
 # ================== CHANGE PASSWORD ==================
 @user_bp.route("/change-password/<int:user_id>", methods=["PATCH"])
 def change_password(user_id):
@@ -208,4 +232,3 @@ def change_password(user_id):
             message=f"Internal server error: {e}",
             code=HttpCode.internal_server_error
         )), HttpCode.internal_server_error
-

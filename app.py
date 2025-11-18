@@ -8,11 +8,15 @@ from werkzeug.exceptions import HTTPException
 from type.http_constants import HttpCode
 from config import JWT_SECRET_KEY
 from database import get_mysql_connection
+
+# === Import các blueprint ===
 from endpoints.authen_enpoints import authen_bp
 from endpoints.author_enpoints import author_bp
 from endpoints.usermanage_endpoints import user_bp
 from endpoints.sign_endpoints import sign_bp
 from endpoints.drowsy_endpoints import drowsy_bp 
+from endpoints.profile_endpoints import profile_bp 
+
 from models import init_dtb
 
 app = Flask(__name__)
@@ -28,6 +32,7 @@ app.register_blueprint(author_bp, url_prefix="/author")
 app.register_blueprint(user_bp, url_prefix="/users")
 app.register_blueprint(sign_bp, url_prefix="/sign")
 app.register_blueprint(drowsy_bp, url_prefix="/drowsy")
+app.register_blueprint(profile_bp, url_prefix="/profile")  # <-- 2. THÊM DÒNG NÀY
 
 
 # ========== TEST Connection ==========

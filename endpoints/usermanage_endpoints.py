@@ -4,10 +4,15 @@ from type.http_constants import HttpCode
 from helper.normalization_response import response_error
 from helper.check_constraints_roles import get_current_user_highest_level
 
+# === SỬA LẠI DÒNG IMPORT NÀY ===
+from flask_jwt_extended import jwt_required
+# ===============================
+
 user_bp = Blueprint("user_bp", __name__, url_prefix="/users")
 
 # ================== LIST ==================
 @user_bp.route("/list", methods=["GET"])
+@jwt_required()  # <--- Thay đổi ở đây
 def list_users():
     """
     Lấy danh sách người dùng (có phân trang + lọc).
@@ -44,6 +49,7 @@ def list_users():
 
 # ================== DETAIL BY ID ==================
 @user_bp.route("/id/<int:user_id>", methods=["GET"])
+@jwt_required() # <--- Thay đổi ở đây
 def get_user_detail(user_id):
     data = request.args
     include_roles = data.get("include_roles", "false").lower() == "true"
@@ -53,6 +59,7 @@ def get_user_detail(user_id):
 
 # ================== DETAIL BY USERNAME ==================
 @user_bp.route("/username/<string:username>", methods=["GET"])
+@jwt_required() # <--- Thay đổi ở đây
 def get_user_by_username(username):
     data = request.args
     include_roles = data.get("include_roles", "false").lower() == "true"
@@ -62,6 +69,7 @@ def get_user_by_username(username):
 
 # ================== FILTER BY ACTIVE STATUS ==================
 @user_bp.route("/active/<string:is_active>", methods=["GET"])
+@jwt_required() # <--- Thay đổi ở đây
 def list_users_by_active(is_active):
     data = request.args
     include_roles = data.get("include_roles", "false").lower() == "true"
@@ -72,6 +80,7 @@ def list_users_by_active(is_active):
 
 # ================== CREATE ==================
 @user_bp.route("/create", methods=["POST"])
+@jwt_required() # <--- Thay đổi ở đây
 def create_user():
     data = request.get_json(silent=True) or {}
     try:
@@ -88,10 +97,13 @@ def create_user():
 
 # ================== UPDATE ==================
 @user_bp.route("/update/<int:user_id>", methods=["PUT"])
+@jwt_required() # <--- QUAN TRỌNG: Để hàm get_current_user_highest_level hoạt động
 def update_user(user_id):
     data = request.get_json(silent=True) or {}
     try:
+        # Hàm này bây giờ sẽ hoạt động vì đã có jwt context
         current_level = get_current_user_highest_level()
+        
         result = UserService.update_user(user_id, data, current_user_level=current_level)
         
         if not result.get("success"):
@@ -107,9 +119,12 @@ def update_user(user_id):
 
 # ================== DELETE ==================
 @user_bp.route("/delete/<int:user_id>", methods=["DELETE"])
+@jwt_required() # <--- QUAN TRỌNG: Để hàm get_current_user_highest_level hoạt động
 def delete_user(user_id):
     try:
+        # Hàm này bây giờ sẽ hoạt động vì đã có jwt context
         current_level = get_current_user_highest_level()
+        
         result = UserService.delete_user(user_id, current_user_level=current_level)
         
         if not result.get("success", False):
@@ -125,6 +140,7 @@ def delete_user(user_id):
 
 # ================== TOGGLE STATUS ==================
 @user_bp.route("/status/<int:user_id>", methods=["PATCH"])
+@jwt_required() # <--- Thay đổi ở đây
 def toggle_user_status(user_id):
     data = request.get_json(silent=True) or {}
     try:
@@ -143,6 +159,7 @@ def toggle_user_status(user_id):
 
 # ================== CHANGE PASSWORD ==================
 @user_bp.route("/change-password/<int:user_id>", methods=["PATCH"])
+@jwt_required() # <--- Thay đổi ở đây
 def change_password(user_id):
     data = request.get_json(silent=True) or {}
     try:

@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
-from flask_session import Session
 from logger import logger
 import time
 from werkzeug.exceptions import HTTPException
@@ -100,4 +99,4 @@ def handle_exception(e):
 ############################################
 # Chạy ứng dụng
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=False, host="0.0.0.0", port=5000)

@@ -1,38 +1,26 @@
-import requests
-from config import AI_SERVER_URL
+import httpx
 from helper.normalization_response import response_success, response_error
 from type.http_constants import HttpCode
-
+from config import AI_SERVER_URL, async_client
 
 class SignService:
     def __init__(self):
-        # Đọc từ config và in ra để debug
-        print(f"AI Server URL from config: {AI_SERVER_URL}")
-        self.ai_server_url = f"{AI_SERVER_URL}/sign/predict"  # Thường AI server có prefix /api
-        print(f"Full AI endpoint URL: {self.ai_server_url}")
+        self.ai_server_url = f"{AI_SERVER_URL.rstrip('/')}/sign/predict"
 
-    def predict_sign(self, image_base64: str):
-        # Payload gửi sang AI server
+    async def predict_sign(self, image_base64: str):
         payload = {"image_base64": image_base64}
-
         try:
-            response = requests.post(self.ai_server_url, json=payload, timeout=30)
-
-            if not response.ok:
-                return response_error(
-                    code=response.status_code,
-                    message="Error from AI server",
-                )
+            resp = await async_client.post(self.ai_server_url, json=payload)
+            if resp.status_code != 200:
+                return response_error(code=HttpCode.bad_request, message="AI server returned error")
+            
+            data = resp.json()
 
             return response_success(
-                data=response.json(),
+                data=data,
                 key="data",
                 message="Analyze sign success",
                 code=HttpCode.success
             )
-
-        except requests.exceptions.RequestException as e:
-            return {
-                "error": f"Failed to connect to AI server: {str(e)}",
-                "url": self.ai_server_url
-            }
+        except httpx.RequestError as e:
+            return {"error": f"Failed to connect to AI server: {str(e)}", "url": self.ai_server_url}

@@ -10,7 +10,7 @@ drowsy_service = DrowsyService()
 
 
 @drowsy_bp.route("/detect", methods=["POST"])
-def detect_drowsiness():
+async def detect_drowsiness():
     try:
         data = request.get_json(silent=True) or {}
 
@@ -24,7 +24,7 @@ def detect_drowsiness():
         detection_event_id = int(deid) if deid not in (None, "") else None
 
         # ---------- Gọi service ----------
-        result = drowsy_service.detect_drowsiness(
+        result = await drowsy_service.detect_drowsiness(
             image_base64=image_base64,
             session_id=session_id,
             detection_event_id=detection_event_id,

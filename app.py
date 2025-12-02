@@ -15,6 +15,7 @@ from endpoints.usermanage_endpoints import user_bp
 from endpoints.sign_endpoints import sign_bp
 from endpoints.drowsy_endpoints import drowsy_bp 
 from endpoints.profile_endpoints import profile_bp 
+from endpoints.object_endpoints import object_bp
 
 from models import init_dtb
 
@@ -32,7 +33,7 @@ app.register_blueprint(user_bp, url_prefix="/users")
 app.register_blueprint(sign_bp, url_prefix="/sign")
 app.register_blueprint(drowsy_bp, url_prefix="/drowsy")
 app.register_blueprint(profile_bp, url_prefix="/profile")  # <-- 2. THÊM DÒNG NÀY
-
+app.register_blueprint(object_bp, url_prefix="/object")
 
 # ========== TEST Connection ==========
 def test_connection():

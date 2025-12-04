@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+import httpx
 
 # load file .env từ thư mục root
 load_dotenv()
@@ -27,3 +28,10 @@ REFRESH_SECRET_KEY = os.getenv("REFRESH_SECRET_KEY")
 
 # Cấu hình URL của AI Server
 AI_SERVER_URL = os.getenv("AI_SERVER_URL", "")
+
+
+async_client = httpx.AsyncClient(
+    timeout=httpx.Timeout(10.0, connect=5.0),
+    limits=httpx.Limits(max_connections=100, max_keepalive_connections=20, keepalive_expiry=30.0),
+    http2=True,
+)

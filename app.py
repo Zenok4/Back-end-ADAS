@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
-from flask_session import Session
 from logger import logger
 import time
 from werkzeug.exceptions import HTTPException
@@ -16,6 +15,7 @@ from endpoints.usermanage_endpoints import user_bp
 from endpoints.sign_endpoints import sign_bp
 from endpoints.drowsy_endpoints import drowsy_bp 
 from endpoints.profile_endpoints import profile_bp 
+from endpoints.object_endpoints import object_bp
 
 from models import init_dtb
 
@@ -33,7 +33,7 @@ app.register_blueprint(user_bp, url_prefix="/users")
 app.register_blueprint(sign_bp, url_prefix="/sign")
 app.register_blueprint(drowsy_bp, url_prefix="/drowsy")
 app.register_blueprint(profile_bp, url_prefix="/profile")  # <-- 2. THÊM DÒNG NÀY
-
+app.register_blueprint(object_bp, url_prefix="/object")
 
 # ========== TEST Connection ==========
 def test_connection():
@@ -100,4 +100,4 @@ def handle_exception(e):
 ############################################
 # Chạy ứng dụng
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=False, host="0.0.0.0", port=5000)

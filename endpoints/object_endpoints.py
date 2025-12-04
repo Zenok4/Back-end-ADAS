@@ -1,13 +1,13 @@
 from flask import Blueprint, request, jsonify
-from services.ai.sign_service import SignService
+from services.ai.object_service import ObjectService
 from helper.normalization_response import response_error
 from type.http_constants import HttpCode
 
-sign_bp = Blueprint("sign", __name__)
-sign_service = SignService()
+object_bp = Blueprint("object", __name__)
+object_service = ObjectService()
 
-@sign_bp.route("/predict", methods=["POST"])
-async def sign_predict():
+@object_bp.route("/predict", methods=["POST"])
+async def object_predict():
     try:
         data = request.get_json()
         if not data or "image_base64" not in data:
@@ -18,7 +18,8 @@ async def sign_predict():
 
         base64_img = data["image_base64"]
 
-        result = await sign_service.predict_sign(base64_img)
+        # Gọi service
+        result = await object_service.predict_object(base64_img)
 
         if isinstance(result, dict) and result.get("error"):
             return jsonify(response_error(

@@ -21,16 +21,19 @@ async def object_predict():
         # Gọi service
         result = await object_service.predict_object(base64_img)
 
+        # Kiểm tra lỗi
         if isinstance(result, dict) and result.get("error"):
             return jsonify(response_error(
                 message=result["error"],
                 code=HttpCode.bad_gateway
             )), HttpCode.bad_gateway
 
+        # Trả về kết quả
         return jsonify({
             "code": HttpCode.success,
             "data": result
         }), HttpCode.success
+
     except Exception as e:
         return jsonify(response_error(
             message=str(e),

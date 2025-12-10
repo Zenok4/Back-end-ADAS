@@ -5,23 +5,25 @@ from config import AI_SERVER_URL, async_client
 
 class ObjectService:
     def __init__(self):
-        # Giả định AI Server có endpoint tương tự sign
+        # Đảm bảo URL trỏ đúng vào router /object/predict bên AI
         self.ai_server_url = f"{AI_SERVER_URL.rstrip('/')}/object/predict"
 
     async def predict_object(self, image_base64: str):
         payload = {"image_base64": image_base64}
         try:
-            # Gửi request sang AI Server (YOLO)
-            resp = await async_client.post(self.ai_server_url, json=payload)
+            resp = await async_client.post(self.ai_server_url, json=payload, timeout=5.0)
             
             if resp.status_code != 200:
-                return response_error(code=HttpCode.bad_request, message="AI server returned error for Object")
+                # Nếu lỗi thì báo lỗi, nhưng vẫn giữ format an toàn
+                return response_error(code=HttpCode.bad_request, message="AI server returned error")
             
+            # AI trả về: { "data": [...], "processing_time": ... }
             data = resp.json()
 
+            # Bọc lại bằng response_success giống hệt SignService
             return response_success(
                 data=data,
-                key="data",
+                key="data", # Key này quan trọng để Frontend lấy đúng data.data
                 message="Analyze object success",
                 code=HttpCode.success
             )

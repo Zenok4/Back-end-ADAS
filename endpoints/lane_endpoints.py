@@ -1,15 +1,17 @@
 from flask import Blueprint, request, jsonify
-from services.ai.sign_service import SignService
+from services.ai.lane_service import LaneService
 from helper.normalization_response import response_error
 from type.http_constants import HttpCode
 
-sign_bp = Blueprint("sign", __name__)
-sign_service = SignService()
+lane_bp = Blueprint("lane", __name__)
+lane_service = LaneService()
 
-@sign_bp.route("/predict", methods=["POST"])
-async def sign_predict():
+@lane_bp.route("/predict", methods=["POST"])
+async def lane_predict():
     try:
         data = request.get_json()
+        
+        # Validate dữ liệu đầu vào
         if not data or "image_base64" not in data:
             return jsonify(response_error(
                 message="No image_base64 provided",
@@ -18,18 +20,19 @@ async def sign_predict():
 
         base64_img = data["image_base64"]
 
-        result = await sign_service.predict_sign(base64_img)
+        # Gọi service xử lý
+        result = await lane_service.predict_lane(base64_img)
 
+        # Kiểm tra nếu service trả về lỗi kết nối hoặc lỗi logic
         if isinstance(result, dict) and result.get("error"):
             return jsonify(response_error(
                 message=result["error"],
                 code=HttpCode.bad_gateway
             )), HttpCode.bad_gateway
 
-        return jsonify({
-            "code": HttpCode.success,
-            "data": result
-        }), HttpCode.success
+        # Trả về kết quả thành công
+        return jsonify(result), HttpCode.success
+        
     except Exception as e:
         return jsonify(response_error(
             message=str(e),

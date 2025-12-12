@@ -14,3 +14,11 @@ def init_dtb(app: Flask):
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
     db.init_app(app)
+
+    with app.app_context():
+        from sqlalchemy import text
+        try:
+            db.session.execute(text("SELECT 1"))
+            print("[DB INIT] Connection OK")
+        except Exception as e:
+            print("[DB INIT] Connection FAILED:", e)

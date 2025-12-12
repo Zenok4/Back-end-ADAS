@@ -1,11 +1,8 @@
-# services/ai/drowsy_services.py
-import requests
-from datetime import datetime
 from decimal import Decimal
 
 from models.drowsiness_event import DrowsinessEvent
 from database import db
-from config import AI_SERVER_URL
+from config import AI_SERVER_URL, async_client
 
 
 class DrowsyService:
@@ -17,7 +14,7 @@ class DrowsyService:
         val = 0.9 if is_drowsy else 0.1
         return Decimal(str(round(val, 4)))
 
-    def detect_drowsiness(
+    async def detect_drowsiness(
         self,
         image_base64: str,
         detection_event_id: int | None = None,
@@ -31,7 +28,7 @@ class DrowsyService:
             if session_id is not None:
                 payload["session_id"] = session_id
 
-            resp = requests.post(self.predict_url, json=payload, timeout=15)
+            resp = await async_client.post(self.predict_url, json=payload)
 
             if resp.status_code != 200:
                 raise Exception(f"AI server {resp.status_code}: {resp.text}")

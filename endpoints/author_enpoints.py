@@ -122,7 +122,6 @@ def create_role():
     description = data.get("description")
     is_active = data.get("is_active", True)
     level = data.get("level", 1)
-
     # Lấy level của người dùng hiện tại
     current_level = data.get("current_user_level", get_current_user_highest_level())
 

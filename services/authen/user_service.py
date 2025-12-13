@@ -185,10 +185,10 @@ class UserService:
             error_message = str(e.orig).lower()
             if "user.username" in error_message:
                 return response_error("Username already exists", HttpCode.bad_request)
-            if "user.email" in error_message:
-                return response_error("Email already exists", HttpCode.bad_request)
-            if "user.phone" in error_message:
-                return response_error("Phone already exists", HttpCode.bad_request)
+            if "email" in error_message:
+                return response_error("Email này đã được sử dụng, vui lòng chọn email khác.", HttpCode.bad_request)
+            if "phone" in error_message:
+                return response_error("Số điện thoại này đã được sử dụng.", HttpCode.bad_request)
             return response_error(f"Duplicate entry error: {error_message}", HttpCode.bad_request)
 
         except SQLAlchemyError as e:
@@ -201,23 +201,34 @@ class UserService:
 
     # =============== UPDATE USER ===============
     @staticmethod
-    def update_user(user_id, data, current_user_level=0):
+    def update_user(user_id, data, current_user_level=0, is_self_update=False):
+        """
+        Cập nhật thông tin user.
+        - is_self_update (bool): Nếu True, bỏ qua kiểm tra level (dùng cho user tự sửa profile).
+        """
         try:
             user = User.query.get(user_id)
             if not user:
                 return response_error("User not found", HttpCode.not_found)
 
-            # === KIỂM TRA LEVEL ===
-            target_user_level = UserService._get_user_max_level(user)
-            if target_user_level >= current_user_level:
-                return response_error(
-                    f"Không đủ quyền hạn. Bạn (Lv.{current_user_level}) không thể chỉnh sửa người dùng có cấp độ cao hơn hoặc bằng ({target_user_level}).", 
-                    HttpCode.forbidden
-                )
-            # ======================
+            # === KIỂM TRA LEVEL (Chỉ chạy khi KHÔNG phải tự update) ===
+            if not is_self_update:
+                target_user_level = UserService._get_user_max_level(user)
+                if target_user_level >= current_user_level:
+                    return response_error(
+                        f"Không đủ quyền hạn. Bạn (Lv.{current_user_level}) không thể chỉnh sửa người dùng có cấp độ cao hơn hoặc bằng ({target_user_level}).", 
+                        HttpCode.forbidden
+                    )
+            # ==========================================================
 
-            for key in ["username", "email", "phone", "display_name"]:
-                if key in data and data[key]:
+            # Danh sách các trường được phép update
+            allowed_fields = [
+                "username", "email", "phone", "display_name",
+                "address", "vehicle_name", "license_plate"
+            ]
+
+            for key in allowed_fields:
+                if key in data: # Chỉ update nếu có trong data gửi lên (kể cả gửi lên None)
                     setattr(user, key, data[key])
 
             db.session.commit()
@@ -232,10 +243,10 @@ class UserService:
             error_message = str(e.orig).lower()
             if "user.username" in error_message:
                 return response_error("Username already exists", HttpCode.bad_request)
-            if "user.email" in error_message:
-                return response_error("Email already exists", HttpCode.bad_request)
-            if "user.phone" in error_message:
-                return response_error("Phone already exists", HttpCode.bad_request)
+            if "email" in error_message:
+                return response_error("Email này đã được sử dụng, vui lòng chọn email khác.", HttpCode.bad_request)
+            if "phone" in error_message:
+                return response_error("Số điện thoại này đã được sử dụng.", HttpCode.bad_request)
             return response_error(f"Duplicate entry error: {error_message}", HttpCode.bad_request)
 
         except SQLAlchemyError as e:

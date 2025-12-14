@@ -8,6 +8,8 @@ from models import user, role, permission
 from models import auth_otp, sessions, media, detection_event, drowsiness_event  
 from models import lane_event, object_detection, sign_detection, notification, audit_log  
 
+from models import car, trip_history
+
 
 def init_dtb(app: Flask):
     app.config["SQLALCHEMY_DATABASE_URI"] = get_db_url()

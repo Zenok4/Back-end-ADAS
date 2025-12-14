@@ -1,66 +1,63 @@
 # middlewares/permission_required.py
-from functools import wraps
+from functools import wraps, lru_cache
 from flask import request, jsonify
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
-from services.author.permission_service import PermissionService
 from type.http_constants import HttpCode
-from helper.normalization_response import response_success, response_error
+from helper.normalization_response import response_error
 
-def permission_required(*perm_codes, require_all: bool = False):
-    """
-    Middleware kiểm tra quyền:
-    - perm_codes: danh sách các permission code.
-    - require_all: nếu True thì yêu cầu có tất cả, nếu False chỉ cần 1 trong số đó.
-    """
+
+# cache permission by user_id
+@lru_cache(maxsize=3000)
+def cached_permissions(user_id: int):
+    """Lấy quyền của người dùng từ dịch vụ và cache chúng."""
+    from services.author.permission_service import PermissionService
+    perms = PermissionService.get_user_permissions(user_id)
+    permissions_list = perms.get('permissions', [])
+    
+    return tuple(permissions_list)
+
+def clear_permissions_cache():
+    """Xóa tất cả các mục đã cache trong lru_cache."""
+    cached_permissions.cache_clear()
+
+def permission_required(*perm_codes, require_all=False):
+    perm_codes = set(perm_codes)
+
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
-            user_id = None
+            """Middleware kiểm tra quyền truy cập của người dùng."""
+
+            # Lấy user ID từ JWT
             try:
-                verify_jwt_in_request(optional=True)
+                verify_jwt_in_request()
                 identity = get_jwt_identity()
-                if isinstance(identity, dict):
-                    user_id = identity.get("id") or identity.get("user_id")
-                else:
-                    user_id = identity
-            except Exception:
-                user_id = None
-
-            if not user_id:
-                user_id = request.headers.get("X-User-Id")
-
-            if not user_id:
-                return jsonify(
-                    response_error(
-                        message="Unauthorized",
-                        code=HttpCode.unauthorized
-                    )
-                ), HttpCode.unauthorized
-
-            try:
+                user_id = identity.get("id") or identity.get("user_id") \
+                    if isinstance(identity, dict) else identity
                 user_id = int(user_id)
             except Exception:
-                return jsonify(
-                    response_error(
-                        message="Invalid user id",
-                        code=HttpCode.bad_request
-                    )
-                ), HttpCode.bad_request
+                return jsonify(response_error(
+                    message="Unauthorized",
+                    code=HttpCode.unauthorized,
+                )), HttpCode.unauthorized
 
-            user_perms = PermissionService.get_user_permissions(user_id)
+            # Lấy quyền đã cache
+            user_perms = cached_permissions(user_id)
 
+            # CHỈ sửa logic lấy code quyền
+            permission_codes = {p["code"] for p in user_perms if isinstance(p, dict)}
+
+            # Check permission
             if require_all:
-                ok = all(code in user_perms for code in perm_codes)
+                ok = perm_codes.issubset(permission_codes)
             else:
-                ok = any(code in user_perms for code in perm_codes)
+                ok = bool(perm_codes & permission_codes)
 
             if not ok:
-                return jsonify(
-                    response_error(
-                        message="Access denied: Insufficient permissions",
-                        code=HttpCode.forbidden
-                    )
-                ), HttpCode.forbidden
+                return jsonify(response_error(
+                    message="Permission Denied",
+                    code=HttpCode.forbidden,
+                )), HttpCode.forbidden
 
             return f(*args, **kwargs)
         return wrapper

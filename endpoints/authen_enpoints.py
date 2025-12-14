@@ -28,18 +28,16 @@ def login_username():
         return jsonify(
             response_error(
                 message="Username and password required",
-                code=HttpCode.bad_request,
-                data={}
+                code=HttpCode.bad_request
             )
         ), HttpCode.bad_request
 
-    result = LoginService.login_with_username(username, password)
+    result = LoginService.login_with_username(username, password, request)
     if "error" in result:
         return jsonify(
             response_error(
                 message=result["error"],
-                code=HttpCode.unauthorized,
-                data={}
+                code=HttpCode.unauthorized
             )
         ), HttpCode.unauthorized
 
@@ -218,35 +216,60 @@ def login_email():
 @authen_bp.route("/refresh", methods=["POST"])
 def refresh_token():
     """
-    Cấp lại access_token mới bằng refresh_token.
-    - Input JSON: { "refresh_token": "..." }
+    Cấp lại access_token mới bằng session_id.
+    - Input JSON: { "session_id": "..." }
     - Trả về: { success: true, message: string, code: int, data: { access_token, expires_in } } nếu thành công
     """
     data = request.get_json(silent=True) or {}
-    refresh_token = data.get("refresh_token")
+    session_id = data.get("session_id")
 
-    if not refresh_token:
+    # 1. Validate input
+    if not session_id:
         return jsonify(
             response_error(
-                message="Refresh token required",
+                message="Session ID required",
                 code=HttpCode.bad_request,
             )
         ), HttpCode.bad_request
 
-    result = LoginService.refresh_access_token(refresh_token)
-    if "error" in result:
+
+    # 2. Validate session (server-side)
+    session = SessionService.validate_session(session_id)
+    if not session:
         return jsonify(
             response_error(
-                message=result["error"],
+                message="Invalid or expired session",
+                code=HttpCode.unauthorized,
+            )
+        ), HttpCode.unauthorized
+    
+    if SessionService.check_rate_limit(session):
+        return response_error("Too many refresh requests"), HttpCode.too_many_requests
+    
+    if SessionService.validate_session_context(session, request) is False:
+        return jsonify(
+            response_error(
+                message="Session context mismatch",
                 code=HttpCode.unauthorized,
             )
         ), HttpCode.unauthorized
 
+    # 3. Refresh access token
+    result = LoginService.refresh_access_token(session)
+    if "error" in result:
+        return jsonify(
+            response_error(
+                message=result["error"],
+                code=HttpCode.internal_server_error,
+            )
+        ), HttpCode.internal_server_error
+
+    # 4. Return new access token
     return jsonify(
         response_success(
             data={
                 "access_token": result["access_token"],
-                "expires_in": timedelta(minutes=15).total_seconds()
+                "expires_in": result["expires_in"]
             },
             message="Token refreshed successfully",
             code=HttpCode.success

@@ -88,17 +88,30 @@ def migrate_columns(app, drop=False):
                         db.session.execute(text(sql))
                         altered.append((table.name, col_name, existing_type, new_type))
 
-            # Xoá / cảnh báo cột thừa
+            # Trong hàm migrate_columns, sửa đổi đoạn "Xoá / cảnh báo cột thừa":
             for col_name in existing_cols:
                 if col_name not in model_cols:
                     if drop:
+                        # Sửa đổi: Gỡ FK trước khi DROP COLUMN
+                        # Bạn cần truyền inspector từ migrate_constraints vào hoặc định nghĩa lại hàm này
+                        
+                        # --- Tái tạo logic gỡ FK ---
+                        fks = inspector.get_foreign_keys(table.name)
+                        for fk in fks:
+                            if col_name in fk["constrained_columns"]:
+                                fk_name = fk["name"]
+                                print(f"🔗 Dropping FK {fk_name} on {table.name}.{col_name} before dropping column.")
+                                db.session.execute(text(f"ALTER TABLE {table.name} DROP FOREIGN KEY {fk_name}"))
+                                break # Chỉ cần drop 1 FK cho cột này
+
+                        # --- DROP COLUMN ---
                         sql = f"ALTER TABLE {table.name} DROP COLUMN {col_name}"
                         db.session.execute(text(sql))
                         dropped.append((table.name, col_name))
                     else:
                         warnings.append((table.name, col_name))
 
-        db.session.commit()
+                    db.session.commit()
 
         # Log
         for t, c in added:

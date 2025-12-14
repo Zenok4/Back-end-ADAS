@@ -4,6 +4,7 @@ from werkzeug.security import check_password_hash
 from werkzeug.security import generate_password_hash
 from datetime import timedelta
 
+import logger
 from models.user import User
 from services.authen.otp_service import OTPService
 from services.authen.session_service import SessionService
@@ -17,7 +18,7 @@ from database import db
 class LoginService:
 
     @staticmethod
-    def login_with_username(username, password):
+    def login_with_username(username, password, request):
         """
         Đăng nhập bằng username + password.
         - Trả về access_token + refresh_token + session_id + user nếu đúng
@@ -26,7 +27,7 @@ class LoginService:
         if not user or not check_password_hash(user.password_hash, password):
             return {"error": "Invalid username or password"}
 
-        return LoginService._generate_token(user)
+        return LoginService._generate_token(user, request)
 
     @staticmethod
     def request_phone_otp(phone: str):
@@ -63,7 +64,7 @@ class LoginService:
     # ================== Internal helpers ==================
 
     @staticmethod
-    def _generate_token(user):
+    def _generate_token(user, request):
         """
         Sinh access token + refresh token, lưu session với refresh_token hash.
         """
@@ -80,7 +81,7 @@ class LoginService:
         )
 
         # lưu session
-        session_id = SessionService.create_session(user.id, refresh_token)
+        session_id = SessionService.create_session(user.id, refresh_token, request=request)
 
         return {
             "success": True,
@@ -98,30 +99,36 @@ class LoginService:
         }
 
     @staticmethod
-    def refresh_access_token(refresh_token: str):
+    def refresh_access_token(session: str):
         """
-        Tạo access token mới nếu refresh_token hợp lệ.
+        Tạo access token mới nếu session hợp lệ.
+
+        Quy trình xử lý:
+        1. Lấy user_id trực tiếp từ session trong DB
+        2. Sinh access token mới với thời hạn cố định (mặc định: 15 phút)
+        3. Trả về access token mới cho client
         """
         # Check trong DB
-        if not SessionService.validate_session(refresh_token):
-            return {"error": "Invalid or revoked refresh token"}
+        if not session:
+            return {"error": "Invalid session"}
 
         try:
-            payload = jwt.decode(refresh_token, REFRESH_SECRET_KEY, algorithms=["HS256"])
-            user_id = payload.get("id")
-            username = payload.get("username")
-
             new_access_token = create_access_token(
-                identity={"id": user_id, "username": username},
+                identity=str(session.user_id),
                 expires_delta=timedelta(minutes=15)
             )
 
-            return {"access_token": new_access_token}
+            return {
+                "access_token": new_access_token,
+                "expires_in": 15 * 60
+            }
 
-        except jwt.ExpiredSignatureError:
-            return {"error": "Refresh token expired"}
-        except jwt.InvalidTokenError:
-            return {"error": "Invalid refresh token"}
+        except Exception as e:
+            logger.exception(
+                "Failed to refresh access token for session_id=%s",
+                getattr(session, "session_id", None)
+            )
+            return {"error": "Internal server error"}
 
     @staticmethod
     def logout(session_id: str):

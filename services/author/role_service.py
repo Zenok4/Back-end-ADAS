@@ -1,4 +1,5 @@
 from database import db
+from middlewares.permission_required import clear_permissions_cache
 from models.role import Role
 from models.user_role import UserRole
 from helper.normalization_response import response_error, response_success
@@ -116,6 +117,7 @@ class RoleService:
             role = Role(name=name, description=description, is_active=is_active, level=level)
             db.session.add(role)
             db.session.commit()
+            clear_permissions_cache()
             return response_success(role.to_dict(), key="role", message="Role created", code=HttpCode.created)
         except Exception as e:
             db.session.rollback()
@@ -152,6 +154,7 @@ class RoleService:
                     setattr(role, key, value) 
 
             db.session.commit()
+            clear_permissions_cache()
             return response_success(role.to_dict(), key="role", message="Role updated")
         except Exception as e:
             db.session.rollback()
@@ -177,6 +180,7 @@ class RoleService:
 
             db.session.delete(role)
             db.session.commit()
+            clear_permissions_cache()
             return response_success({"id": role_id}, key="deleted", message="Role deleted")
         except Exception as e:
             db.session.rollback()
@@ -226,6 +230,7 @@ class RoleService:
                         )
 
             db.session.commit()
+            clear_permissions_cache()
 
             return response_success(
                 assigned_roles,

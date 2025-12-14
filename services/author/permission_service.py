@@ -1,4 +1,5 @@
 from database import db
+from middlewares.permission_required import clear_permissions_cache
 from models.permission import Permission
 from models.role_permission import RolePermission
 from models.user_role import UserRole
@@ -78,6 +79,7 @@ class PermissionService:
 
             role.permissions = new_permissions
             db.session.commit()
+            clear_permissions_cache()
             return response_success(
                 [p.to_dict() for p in new_permissions],
                 key="assigned_permissions",
@@ -100,6 +102,7 @@ class PermissionService:
         if perm in role.permissions:
             role.permissions.remove(perm)
             db.session.commit()
+            clear_permissions_cache()
         return response_success(role.to_dict(), key="role")
 
     @staticmethod
@@ -134,6 +137,7 @@ class PermissionService:
             binding = UserRole(user_id=user_id, role_id=role_id)
             db.session.add(binding)
             db.session.commit()
+            clear_permissions_cache()
 
             return response_success(
                 {"user_id": user_id, "role_id": role_id},

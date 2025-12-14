@@ -19,6 +19,7 @@ class HttpCode(IntEnum):
     not_found = 404
     not_acceptable = 406
     conflict = 409
+    too_many_requests = 429
 
     # 5xx Server Error
     internal_server_error = 500

@@ -59,7 +59,7 @@ pip freeze > requirements.txt
 ```
 
 
-**Generated:** 2025-12-15 19:12:54
+**Generated:** 2025-12-15 19:14:44
 
 ## 📂 Cấu trúc thư mục
 
@@ -95,7 +95,6 @@ _47 endpoint(s) found._
 
 | Method(s) | Path | Function | File | Description |
 |-----------|------|----------|------|-------------|
-| GET | `/` | `list_trips()` | `endpoints\trip_endpoints.py` | Lấy danh sách các chuyến đi của người dùng. |
 | POST | `/authen/forgot-password/email/reset` | `forgot_password_email_reset()` | `endpoints\authen_enpoints.py` | Reset mật khẩu qua email. |
 | POST | `/authen/forgot-password/email/send-otp` | `forgot_password_email_send_otp()` | `endpoints\authen_enpoints.py` | Gửi OTP phục hồi mật khẩu qua email. |
 | POST | `/authen/forgot-password/phone/reset` | `forgot_password_phone_reset()` | `endpoints\authen_enpoints.py` | Reset mật khẩu qua số điện thoại. |
@@ -128,11 +127,12 @@ _47 endpoint(s) found._
 | GET | `/author/users/<int:user_id>/permissions/list` | `get_user_permissions()` | `endpoints\author_enpoints.py` | Lấy danh sách permissions của 1 user (từ roles của user). |
 | POST | `/author/users/<int:user_id>/roles/assign` | `assign_roles_to_user()` | `endpoints\author_enpoints.py` | Gán nhiều roles cho 1 user. |
 | GET | `/author/users/<int:user_id>/roles/list` | `get_user_roles()` | `endpoints\author_enpoints.py` | Lấy danh sách roles của 1 user. |
-| GET | `/events-by-day` | `list_events_by_day()` | `endpoints\trip_endpoints.py` | Lấy danh sách sự kiện theo từng ngày, có phân trang và lọc. |
-| POST | `/location` | `record_location()` | `endpoints\trip_endpoints.py` | Ghi nhận vị trí (location) của người dùng trong chuyến đi. |
 | PUT | `/profile/update` | `update_my_profile()` | `endpoints\profile_endpoints.py` | API: Cập nhật profile cho user đang đăng nhập. |
-| GET | `/summary` | `trip_summary()` | `endpoints\trip_endpoints.py` | Lấy thông tin tổng hợp chuyến đi của người dùng. |
 | GET | `/test-connection` | `test_connection_api()` | `app.py` | Kiểm tra kết nối giữa server và database |
+| GET | `/trip/` | `list_trips()` | `endpoints\trip_endpoints.py` | Lấy danh sách các chuyến đi của người dùng. |
+| GET | `/trip/events-by-day` | `list_events_by_day()` | `endpoints\trip_endpoints.py` | Lấy danh sách sự kiện theo từng ngày, có phân trang và lọc. |
+| POST | `/trip/location` | `record_location()` | `endpoints\trip_endpoints.py` | Ghi nhận vị trí (location) của người dùng trong chuyến đi. |
+| GET | `/trip/summary` | `trip_summary()` | `endpoints\trip_endpoints.py` | Lấy thông tin tổng hợp chuyến đi của người dùng. |
 | GET | `/users/active/<string:is_active>` | `list_users_by_active()` | `endpoints\usermanage_endpoints.py` | Lọc danh sách người dùng theo trạng thái hoạt động. |
 | PATCH | `/users/change-password/<int:user_id>` | `change_password()` | `endpoints\usermanage_endpoints.py` | Đổi mật khẩu của người dùng. |
 | POST | `/users/create` | `create_user()` | `endpoints\usermanage_endpoints.py` | Tạo mới một người dùng. |

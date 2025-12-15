@@ -5,7 +5,7 @@ from services.history.trip_service import TripHistoryService
 from helper.normalization_response import response_error, response_success
 from type.http_constants import HttpCode
 
-trip_bp = Blueprint("trip", __name__)
+trip_bp = Blueprint("trip", __name__, url_prefix="/trip")
 
 @trip_bp.route("/", methods=["GET"])
 def list_trips():

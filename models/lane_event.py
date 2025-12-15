@@ -6,8 +6,6 @@ class LaneEvent(db.Model):
 
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     detection_event_id = db.Column(db.BigInteger, db.ForeignKey("detection_events.id", ondelete="CASCADE"), nullable=False)
-    deviation_meters = db.Column(db.Numeric(6, 3))
-    direction = db.Column(db.Enum('left', 'right'))
     confidence = db.Column(db.Numeric(5, 4))
     updated_at = db.Column(db.DateTime, default=datetime.now(), onupdate=datetime.now())
     created_at = db.Column(db.DateTime, default=datetime.now())

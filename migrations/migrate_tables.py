@@ -12,7 +12,13 @@ def migrate_tables(app, drop=False):
         dropped = []
         warnings = []
 
-        existing_tables = inspector.get_table_names()
+        result = db.session.execute(text("""
+            SELECT table_name
+            FROM information_schema.tables
+            WHERE table_schema = DATABASE()
+        """))
+
+        existing_tables = [row[0] for row in result]
         model_tables = [table.name for table in db.metadata.sorted_tables]
 
         # 1️⃣ Tạo table mới

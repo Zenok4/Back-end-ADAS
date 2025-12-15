@@ -96,13 +96,26 @@ def migrate_columns(app, drop=False):
                         # Bạn cần truyền inspector từ migrate_constraints vào hoặc định nghĩa lại hàm này
                         
                         # --- Tái tạo logic gỡ FK ---
-                        fks = inspector.get_foreign_keys(table.name)
-                        for fk in fks:
-                            if col_name in fk["constrained_columns"]:
-                                fk_name = fk["name"]
-                                print(f"🔗 Dropping FK {fk_name} on {table.name}.{col_name} before dropping column.")
-                                db.session.execute(text(f"ALTER TABLE {table.name} DROP FOREIGN KEY {fk_name}"))
-                                break # Chỉ cần drop 1 FK cho cột này
+                        fk_query = text("""
+                            SELECT CONSTRAINT_NAME
+                            FROM information_schema.KEY_COLUMN_USAGE
+                            WHERE TABLE_SCHEMA = DATABASE()
+                            AND TABLE_NAME = :table
+                            AND COLUMN_NAME = :column
+                            AND REFERENCED_TABLE_NAME IS NOT NULL
+                        """)
+
+                        fk_rows = db.session.execute(
+                            fk_query,
+                            {"table": table.name, "column": col_name}
+                        ).fetchall()
+
+                        for row in fk_rows:
+                            fk_name = row[0]
+                            print(f"🔗 Dropping FK {fk_name} on {table.name}.{col_name}")
+                            db.session.execute(
+                                text(f"ALTER TABLE `{table.name}` DROP FOREIGN KEY `{fk_name}`")
+                            )
 
                         # --- DROP COLUMN ---
                         sql = f"ALTER TABLE {table.name} DROP COLUMN {col_name}"

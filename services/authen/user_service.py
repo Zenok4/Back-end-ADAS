@@ -12,23 +12,30 @@ try:
     from werkzeug.security import generate_password_hash
 except ImportError:
     def generate_password_hash(password):
-        # Fallback (hoặc logger) nếu werkzeug không có sẵn
         print("CẢNH BÁO: werkzeug.security không được cài đặt. Mật khẩu không được hash.", file=sys.stderr)
         return password
 
-# =======================================================================
-# == FILE 2: USER SERVICE (LOGIC NGHIỆP VỤ)
-# =======================================================================
-
 class UserService:
 
-    # =============== GET ALL USERS (ĐÃ SỬA) ===============
+    # =============== HELPER: LẤY LEVEL CAO NHẤT CỦA USER ===============
+    @staticmethod
+    def _get_user_max_level(user):
+        """
+        Lấy level cao nhất trong danh sách roles của user object.
+        Trả về 0 nếu user không có role nào.
+        """
+        if not user or not user.roles:
+            return 0
+        levels = [r.level for r in user.roles if hasattr(r, 'level')]
+        return max(levels) if levels else 0
+
+    # =============== GET ALL USERS ===============
     @staticmethod
     def get_all_users(page=1, limit=20, search=None, is_active=None, role_id=None):
         try:
             query = User.query
 
-            # SỬA ĐỔI: Logic lọc theo 'search' (thay vì keyword)
+            # Logic lọc theo 'search'
             if search:
                 search_like = f"%{search}%"
                 query = query.filter(
@@ -39,18 +46,17 @@ class UserService:
                     )
                 )
             
-            # THÊM MỚI: Logic lọc theo trạng thái
+            # Logic lọc theo trạng thái
             if is_active is not None:
                 query = query.filter(User.is_active == is_active)
             
-            # THÊM MỚI: Logic lọc theo vai trò
+            # Logic lọc theo vai trò
             if role_id is not None:
-                # Join với bảng UserRole và lọc
                 query = query.join(UserRole, User.id == UserRole.user_id).filter(
                     UserRole.role_id == role_id
                 )
 
-            # Đếm tổng số lượng (sau khi lọc)
+            # Đếm tổng số lượng
             total = query.count()
             
             # Phân trang và sắp xếp
@@ -61,8 +67,21 @@ class UserService:
                 .all()
             )
 
+            # Chuyển đổi sang dict và sắp xếp Role theo level giảm dần để hiển thị đẹp hơn
+            user_list = []
+            for u in users:
+                u_dict = u.to_dict(include_roles=True)
+                if "roles" in u_dict and u_dict["roles"]:
+                    # Sắp xếp roles: Level cao xếp trước
+                    u_dict["roles"] = sorted(
+                        u_dict["roles"], 
+                        key=lambda x: x.get("level", 0), 
+                        reverse=True
+                    )
+                user_list.append(u_dict)
+
             payload = {
-                "users": [u.to_dict(include_roles=True) for u in users],
+                "users": user_list,
                 "page": page,
                 "limit": limit,
                 "total": total,
@@ -182,11 +201,20 @@ class UserService:
 
     # =============== UPDATE USER ===============
     @staticmethod
-    def update_user(user_id, data):
+    def update_user(user_id, data, current_user_level=0):
         try:
             user = User.query.get(user_id)
             if not user:
                 return response_error("User not found", HttpCode.not_found)
+
+            # === KIỂM TRA LEVEL ===
+            target_user_level = UserService._get_user_max_level(user)
+            if target_user_level >= current_user_level:
+                return response_error(
+                    f"Không đủ quyền hạn. Bạn (Lv.{current_user_level}) không thể chỉnh sửa người dùng có cấp độ cao hơn hoặc bằng ({target_user_level}).", 
+                    HttpCode.forbidden
+                )
+            # ======================
 
             for key in ["username", "email", "phone", "display_name"]:
                 if key in data and data[key]:
@@ -220,11 +248,20 @@ class UserService:
 
     # =============== DELETE USER ===============
     @staticmethod
-    def delete_user(user_id):
+    def delete_user(user_id, current_user_level=0):
         try:
             user = User.query.get(user_id)
             if not user:
                 return response_error("User not found", HttpCode.not_found)
+
+            # === KIỂM TRA LEVEL ===
+            target_user_level = UserService._get_user_max_level(user)
+            if target_user_level >= current_user_level:
+                return response_error(
+                    f"Không đủ quyền hạn. Bạn (Lv.{current_user_level}) không thể xóa người dùng có cấp độ cao hơn hoặc bằng ({target_user_level}).", 
+                    HttpCode.forbidden
+                )
+            # ======================
 
             db.session.delete(user)
             db.session.commit()
@@ -240,11 +277,20 @@ class UserService:
 
     # =============== TOGGLE USER STATUS ===============
     @staticmethod
-    def toggle_status(user_id, data):
+    def toggle_status(user_id, data, current_user_level=0):
         try:
             user = User.query.get(user_id)
             if not user:
                 return response_error("User not found", HttpCode.not_found)
+            
+            # === KIỂM TRA LEVEL ===
+            target_user_level = UserService._get_user_max_level(user)
+            if target_user_level >= current_user_level:
+                return response_error(
+                    f"Không đủ quyền hạn. Bạn không thể thay đổi trạng thái của người dùng có cấp độ cao hơn hoặc bằng ({target_user_level}).", 
+                    HttpCode.forbidden
+                )
+            # ======================
 
             is_active = data.get("is_active")
             if is_active is None:

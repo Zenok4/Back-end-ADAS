@@ -2,11 +2,14 @@ from flask import Blueprint, request, jsonify
 from services.authen.user_service import UserService
 from type.http_constants import HttpCode
 from helper.normalization_response import response_error
+from helper.check_constraints_roles import get_current_user_highest_level
+from flask_jwt_extended import jwt_required
 
 user_bp = Blueprint("user_bp", __name__, url_prefix="/users")
 
-# ================== LIST (ĐÃ SỬA) ==================
+# ================== LIST ==================
 @user_bp.route("/list", methods=["GET"])
+@jwt_required()
 def list_users():
     """
     Lấy danh sách người dùng (có phân trang + lọc).
@@ -20,23 +23,19 @@ def list_users():
         { success, message, code, data: { users, page, limit, total } }
     """
     try:
-        # Đọc các tham số cơ bản
         page = int(request.args.get("page", 1))
         limit = int(request.args.get("limit", 20))
         
-        # SỬA ĐỔI: Đọc các tham số lọc mới
-        search = request.args.get("search", None) # Đổi từ keyword -> search
+        search = request.args.get("search", None)
         is_active_str = request.args.get("is_active", None)
         role_id = request.args.get("role_id", None, type=int)
 
-        # Chuyển đổi 'is_active' từ string ('true'/'false') sang boolean
         is_active = None
         if is_active_str == 'true':
             is_active = True
         elif is_active_str == 'false':
             is_active = False
 
-        # SỬA ĐỔI: Truyền tất cả tham số vào service
         result = UserService.get_all_users(
             page=page, 
             limit=limit, 
@@ -55,6 +54,7 @@ def list_users():
 
 # ================== DETAIL BY ID ==================
 @user_bp.route("/id/<int:user_id>", methods=["GET"])
+@jwt_required()
 def get_user_detail(user_id):
     """
     Lấy thông tin chi tiết người dùng theo ID.
@@ -71,6 +71,7 @@ def get_user_detail(user_id):
 
 # ================== DETAIL BY USERNAME ==================
 @user_bp.route("/username/<string:username>", methods=["GET"])
+@jwt_required()
 def get_user_by_username(username):
     """
     Lấy thông tin người dùng theo username.
@@ -87,6 +88,7 @@ def get_user_by_username(username):
 
 # ================== FILTER BY ACTIVE STATUS ==================
 @user_bp.route("/active/<string:is_active>", methods=["GET"])
+@jwt_required()
 def list_users_by_active(is_active):
     """
     Lọc danh sách người dùng theo trạng thái hoạt động.
@@ -106,6 +108,7 @@ def list_users_by_active(is_active):
 
 # ================== CREATE ==================
 @user_bp.route("/create", methods=["POST"])
+@jwt_required()
 def create_user():
     """
     Tạo mới một người dùng.
@@ -135,6 +138,7 @@ def create_user():
 
 # ================== UPDATE ==================
 @user_bp.route("/update/<int:user_id>", methods=["PUT"])
+@jwt_required()
 def update_user(user_id):
     """
     Cập nhật thông tin người dùng.
@@ -150,9 +154,14 @@ def update_user(user_id):
     """
     data = request.get_json(silent=True) or {}
     try:
-        result = UserService.update_user(user_id, data)
+        # QUAN TRỌNG: Lấy level hiện tại để kiểm tra quyền sửa đổi
+        current_level = get_current_user_highest_level()
+        
+        result = UserService.update_user(user_id, data, current_user_level=current_level)
+        
         if not result.get("success"):
             return jsonify(result), result.get("code", HttpCode.bad_request)
+            
         return jsonify(result), result.get("code", HttpCode.success)
     except Exception as e:
         return jsonify(response_error(
@@ -163,6 +172,7 @@ def update_user(user_id):
 
 # ================== DELETE ==================
 @user_bp.route("/delete/<int:user_id>", methods=["DELETE"])
+@jwt_required()
 def delete_user(user_id):
     """
     Xóa một người dùng theo ID.
@@ -172,9 +182,14 @@ def delete_user(user_id):
         { success, message, code, data: { id } }
     """
     try:
-        result = UserService.delete_user(user_id)
+        # QUAN TRỌNG: Lấy level hiện tại để kiểm tra quyền xóa
+        current_level = get_current_user_highest_level()
+        
+        result = UserService.delete_user(user_id, current_user_level=current_level)
+        
         if not result.get("success", False):
             return jsonify(result), result.get("code", HttpCode.not_found)
+            
         return jsonify(result), result.get("code", HttpCode.success)
     except Exception as e:
         return jsonify(response_error(
@@ -185,6 +200,7 @@ def delete_user(user_id):
 
 # ================== TOGGLE STATUS ==================
 @user_bp.route("/status/<int:user_id>", methods=["PATCH"])
+@jwt_required()
 def toggle_user_status(user_id):
     """
     Thay đổi trạng thái hoạt động của người dùng (active / inactive).
@@ -197,7 +213,9 @@ def toggle_user_status(user_id):
     """
     data = request.get_json(silent=True) or {}
     try:
-        result = UserService.toggle_status(user_id, data)
+        current_level = get_current_user_highest_level()
+        result = UserService.toggle_status(user_id, data, current_user_level=current_level)
+        
         if not result.get("success"):
             return jsonify(result), result.get("code", HttpCode.bad_request)
         return jsonify(result), result.get("code", HttpCode.success)
@@ -210,6 +228,7 @@ def toggle_user_status(user_id):
 
 # ================== CHANGE PASSWORD ==================
 @user_bp.route("/change-password/<int:user_id>", methods=["PATCH"])
+@jwt_required()
 def change_password(user_id):
     """
     Đổi mật khẩu của người dùng.

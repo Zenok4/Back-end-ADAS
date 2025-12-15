@@ -7,7 +7,6 @@ class ObjectDetection(db.Model):
     id = db.Column(db.BigInteger, primary_key=True, autoincrement=True)
     detection_event_id = db.Column(db.BigInteger, db.ForeignKey("detection_events.id", ondelete="CASCADE"), nullable=False)
     object_type = db.Column(db.String(100))
-    bbox = db.Column(db.JSON)
     confidence = db.Column(db.Numeric(5, 4))
     updated_at = db.Column(db.DateTime, default=datetime.now(), onupdate=datetime.now())
     created_at = db.Column(db.DateTime, default=datetime.now())

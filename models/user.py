@@ -13,8 +13,10 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     display_name = db.Column(db.String(255))
     is_active = db.Column(db.Boolean, nullable=False, default=True)
-    updated_at = db.Column(db.DateTime, default=datetime.now(), onupdate=datetime.now())
-    created_at = db.Column(db.DateTime, default=datetime.now())
+    
+    # === SỬA TẠI ĐÂY: Bỏ dấu ngoặc () sau datetime.now ===
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     roles = db.relationship(
         "Role",
@@ -36,11 +38,3 @@ class User(db.Model):
         if include_roles:
             data["roles"] = [r.to_dict() for r in self.roles]
         return data
-
-
-# @event.listens_for(User, 'after_insert')
-# def assign_default_role(mapper, connection, target):
-#     default_role_id = 1
-#     connection.execute(
-#         db.insert(UserRole.__table__).values(user_id=target.id, role_id=default_role_id)
-#     )

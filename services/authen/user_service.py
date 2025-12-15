@@ -7,6 +7,7 @@ from database import db
 from type.http_constants import HttpCode
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy import or_
+from services.authen.otp_service import OTPService  # Import OTPService
 
 try:
     from werkzeug.security import generate_password_hash
@@ -322,9 +323,12 @@ class UserService:
             return response_error(f"Toggle status failed: {str(e)}", HttpCode.internal_server_error)
 
 
-    # =============== CHANGE PASSWORD ===============
+    # =============== CHANGE PASSWORD (CÓ OTP) ===============
     @staticmethod
     def change_password(user_id, data):
+        """
+        Đổi mật khẩu: Yêu cầu pass cũ + pass mới + OTP.
+        """
         try:
             user = User.query.get(user_id)
             if not user:
@@ -332,22 +336,33 @@ class UserService:
 
             old_password = data.get("old_password")
             new_password = data.get("new_password")
+            otp_code = data.get("otp_code")  # <--- Bắt buộc có OTP
 
-            if not old_password or not new_password:
-                return response_error("Missing required fields", HttpCode.bad_request)
+            if not old_password or not new_password or not otp_code:
+                return response_error("Missing required fields (old_password, new_password, otp_code)", HttpCode.bad_request)
 
-            # Kiểm tra mật khẩu cũ
+            # 1. Kiểm tra mật khẩu cũ
             from werkzeug.security import check_password_hash
             if not check_password_hash(user.password_hash, old_password):
                 return response_error("Old password is incorrect", HttpCode.bad_request)
 
-            # Không cho phép đổi sang mật khẩu cũ (optional)
+            # 2. Kiểm tra OTP
+            # Ưu tiên email, nếu không có thì dùng phone
+            identifier = user.email if user.email else user.phone
+            if not identifier:
+                 return response_error("User has no contact info to verify OTP", HttpCode.bad_request)
+
+            # Dùng purpose='change_password'
+            check_otp = OTPService.validate_otp_only(identifier, otp_code, purpose="change_password")
+            if not check_otp["valid"]:
+                return response_error(check_otp["error"], HttpCode.bad_request)
+
+            # 3. Kiểm tra pass mới có trùng pass cũ không
             if check_password_hash(user.password_hash, new_password):
                 return response_error("New password must be different from old password", HttpCode.bad_request)
 
-            # Hash mật khẩu mới
+            # 4. Hash và lưu mật khẩu mới
             user.password_hash = generate_password_hash(new_password)
-
             db.session.commit()
 
             return response_success(
@@ -366,3 +381,48 @@ class UserService:
         except Exception as e:
             db.session.rollback()
             return response_error(f"Change password failed: {str(e)}", HttpCode.internal_server_error)
+
+    # =============== GỬI OTP ĐỔI MẬT KHẨU ===============
+    @staticmethod
+    def send_otp_for_change_password(user_id, channel="email"):
+        """
+        Gửi OTP về email hoặc sđt để đổi mật khẩu.
+        channel: 'email' hoặc 'phone'
+        """
+        try:
+            user = User.query.get(user_id)
+            if not user:
+                return response_error("User not found", HttpCode.not_found)
+            
+            identifier = None
+            type_id = None
+
+            # Logic chọn kênh gửi
+            if channel == "email":
+                if not user.email:
+                    return response_error("Tài khoản này chưa cập nhật Email.", HttpCode.bad_request)
+                identifier = user.email
+                type_id = "email"
+            elif channel == "phone":
+                if not user.phone:
+                    return response_error("Tài khoản này chưa cập nhật Số điện thoại.", HttpCode.bad_request)
+                identifier = user.phone
+                type_id = "phone"
+            else:
+                # Fallback: Tự động chọn nếu gửi channel linh tinh
+                if user.email:
+                    identifier = user.email
+                    type_id = "email"
+                elif user.phone:
+                    identifier = user.phone
+                    type_id = "phone"
+            
+            if not identifier:
+                 return response_error("User has no contact info to send OTP", HttpCode.bad_request)
+
+            # Gửi OTP với purpose='change_password'
+            OTPService.create_and_send_otp(identifier, type_id, purpose="change_password")
+            
+            return response_success(message=f"OTP sent to {identifier}")
+        except Exception as e:
+            return response_error(f"Error sending OTP: {str(e)}", HttpCode.internal_server_error)

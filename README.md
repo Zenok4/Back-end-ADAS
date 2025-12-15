@@ -59,12 +59,12 @@ pip freeze > requirements.txt
 ```
 
 
-**Generated:** 2025-11-14 15:12:49
+**Generated:** 2025-12-15 19:12:54
 
 ## 📂 Cấu trúc thư mục
 
 ```
-backend/
+Back-end-ADAS/
 ├── 📂 .git/
 ├── 📂 __pycache__/
 ├── 📂 endpoints/
@@ -91,10 +91,11 @@ backend/
 
 ## 🌐 API Endpoints
 
-_44 endpoint(s) found._
+_47 endpoint(s) found._
 
 | Method(s) | Path | Function | File | Description |
 |-----------|------|----------|------|-------------|
+| GET | `/` | `list_trips()` | `endpoints\trip_endpoints.py` | Lấy danh sách các chuyến đi của người dùng. |
 | POST | `/authen/forgot-password/email/reset` | `forgot_password_email_reset()` | `endpoints\authen_enpoints.py` | Reset mật khẩu qua email. |
 | POST | `/authen/forgot-password/email/send-otp` | `forgot_password_email_send_otp()` | `endpoints\authen_enpoints.py` | Gửi OTP phục hồi mật khẩu qua email. |
 | POST | `/authen/forgot-password/phone/reset` | `forgot_password_phone_reset()` | `endpoints\authen_enpoints.py` | Reset mật khẩu qua số điện thoại. |
@@ -106,7 +107,7 @@ _44 endpoint(s) found._
 | POST | `/authen/login/username` | `login_username()` | `endpoints\authen_enpoints.py` | Đăng nhập bằng username + password. |
 | POST | `/authen/logout` | `logout()` | `endpoints\authen_enpoints.py` | Đăng xuất người dùng: thu hồi (revoke) session trong DB. |
 | GET | `/authen/me` | `get_current_user()` | `endpoints\authen_enpoints.py` | Lấy thông tin người dùng hiện tại dựa trên access token (JWT). |
-| POST | `/authen/refresh` | `refresh_token()` | `endpoints\authen_enpoints.py` | Cấp lại access_token mới bằng refresh_token. |
+| POST | `/authen/refresh` | `refresh_token()` | `endpoints\authen_enpoints.py` | Cấp lại access_token mới bằng session_id. |
 | POST | `/authen/register/email` | `register_email()` | `endpoints\authen_enpoints.py` | Đăng ký bằng email + password + OTP. |
 | POST | `/authen/register/phone` | `register_phone()` | `endpoints\authen_enpoints.py` | Đăng ký bằng số điện thoại + OTP. |
 | POST | `/authen/register/username` | `register_username()` | `endpoints\authen_enpoints.py` | Đăng ký bằng username + password. |
@@ -127,15 +128,17 @@ _44 endpoint(s) found._
 | GET | `/author/users/<int:user_id>/permissions/list` | `get_user_permissions()` | `endpoints\author_enpoints.py` | Lấy danh sách permissions của 1 user (từ roles của user). |
 | POST | `/author/users/<int:user_id>/roles/assign` | `assign_roles_to_user()` | `endpoints\author_enpoints.py` | Gán nhiều roles cho 1 user. |
 | GET | `/author/users/<int:user_id>/roles/list` | `get_user_roles()` | `endpoints\author_enpoints.py` | Lấy danh sách roles của 1 user. |
-| POST | `/detect` | `detect_drowsiness()` | `endpoints\drowsy_endpoints.py` |  |
-| POST | `/predict` | `sign_predict()` | `endpoints\sign_endpoints.py` | Endpoint nhận diện biển báo giao thông. |
+| GET | `/events-by-day` | `list_events_by_day()` | `endpoints\trip_endpoints.py` | Lấy danh sách sự kiện theo từng ngày, có phân trang và lọc. |
+| POST | `/location` | `record_location()` | `endpoints\trip_endpoints.py` | Ghi nhận vị trí (location) của người dùng trong chuyến đi. |
+| PUT | `/profile/update` | `update_my_profile()` | `endpoints\profile_endpoints.py` | API: Cập nhật profile cho user đang đăng nhập. |
+| GET | `/summary` | `trip_summary()` | `endpoints\trip_endpoints.py` | Lấy thông tin tổng hợp chuyến đi của người dùng. |
 | GET | `/test-connection` | `test_connection_api()` | `app.py` | Kiểm tra kết nối giữa server và database |
 | GET | `/users/active/<string:is_active>` | `list_users_by_active()` | `endpoints\usermanage_endpoints.py` | Lọc danh sách người dùng theo trạng thái hoạt động. |
 | PATCH | `/users/change-password/<int:user_id>` | `change_password()` | `endpoints\usermanage_endpoints.py` | Đổi mật khẩu của người dùng. |
 | POST | `/users/create` | `create_user()` | `endpoints\usermanage_endpoints.py` | Tạo mới một người dùng. |
 | DELETE | `/users/delete/<int:user_id>` | `delete_user()` | `endpoints\usermanage_endpoints.py` | Xóa một người dùng theo ID. |
 | GET | `/users/id/<int:user_id>` | `get_user_detail()` | `endpoints\usermanage_endpoints.py` | Lấy thông tin chi tiết người dùng theo ID. |
-| GET | `/users/list` | `list_users()` | `endpoints\usermanage_endpoints.py` | Lấy danh sách người dùng (có phân trang + tìm kiếm). |
+| GET | `/users/list` | `list_users()` | `endpoints\usermanage_endpoints.py` | Lấy danh sách người dùng (có phân trang + lọc). |
 | PATCH | `/users/status/<int:user_id>` | `toggle_user_status()` | `endpoints\usermanage_endpoints.py` | Thay đổi trạng thái hoạt động của người dùng (active / inactive). |
 | PUT | `/users/update/<int:user_id>` | `update_user()` | `endpoints\usermanage_endpoints.py` | Cập nhật thông tin người dùng. |
 | GET | `/users/username/<string:username>` | `get_user_by_username()` | `endpoints\usermanage_endpoints.py` | Lấy thông tin người dùng theo username. |

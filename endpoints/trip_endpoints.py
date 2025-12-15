@@ -9,6 +9,32 @@ trip_bp = Blueprint("trip", __name__)
 
 @trip_bp.route("/", methods=["GET"])
 def list_trips():
+    """
+    Lấy danh sách các chuyến đi của người dùng.
+    
+    - Method: GET
+    - URL: /api/trips/
+    - Query params:
+        - user_id (int, required): ID người dùng
+        - start_date (ISO datetime, optional): Thời gian bắt đầu lọc
+        - end_date (ISO datetime, optional): Thời gian kết thúc lọc
+
+    - Trả về:
+        {
+          success: true,
+          message: string,
+          code: int,
+          data: [
+            {
+              date: "YYYY-MM-DD",
+              car: { id, name, plate },
+              duration_minutes: int,
+              alerts: { total, drowsiness, object, lane, sign },
+              events: [...]
+            }
+          ]
+        }
+    """
     try:
         user_id = request.args.get("user_id", type=int)
         if not user_id:
@@ -51,6 +77,27 @@ def list_trips():
 
 @trip_bp.route("/location", methods=["POST"])
 def record_location():
+    """
+    Ghi nhận vị trí (location) của người dùng trong chuyến đi.
+
+    - Method: POST
+    - URL: /api/trips/location
+    - Input JSON:
+        {
+          "user_id": int,
+          "latitude": float,
+          "longitude": float,
+          "captured_at": "ISO datetime" (optional)
+        }
+
+    - Trả về:
+        {
+          success: true,
+          message: string,
+          code: int,
+          data: { "id": trip_id }
+        }
+    """
     try:
         data = request.get_json()
 
@@ -88,6 +135,27 @@ def record_location():
 
 @trip_bp.route("/summary", methods=["GET"])
 def trip_summary():
+    """
+    Lấy thông tin tổng hợp chuyến đi của người dùng.
+
+    - Method: GET
+    - URL: /api/trips/summary
+    - Query params:
+        - user_id (int, required)
+
+    - Trả về:
+        {
+          success: true,
+          message: string,
+          code: int,
+          data: {
+            latest_location: { latitude, longitude },
+            car_name: string,
+            total_time_seconds: int,
+            total_alerts: int
+          }
+        }
+    """
     try:
         user_id = request.args.get("user_id", type=int)
         if not user_id:
@@ -113,6 +181,37 @@ def trip_summary():
 
 @trip_bp.route("/events-by-day", methods=["GET"])
 def list_events_by_day():
+    """
+    Lấy danh sách sự kiện theo từng ngày, có phân trang và lọc.
+
+    - Method: GET
+    - URL: /api/trips/events-by-day
+    - Query params:
+        - user_id (int, required)
+        - start_date (ISO datetime, optional)
+        - end_date (ISO datetime, optional)
+        - event_type (string: sign | drowsiness | object | lane, optional)
+        - page (int, default=1)
+        - page_size (int, default=100)
+
+    - Trả về:
+        {
+          success: true,
+          message: string,
+          code: int,
+          data: [
+            {
+              date: "YYYY-MM-DD",
+              events: [...],
+              summary: {...},
+              page: int,
+              page_size: int,
+              total_items: int,
+              total_pages: int
+            }
+          ]
+        }
+    """
     user_id = request.args.get("user_id", type=int)
 
     start_date = request.args.get("start_date")

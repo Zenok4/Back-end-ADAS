@@ -59,83 +59,9 @@ def login_username():
     ), HttpCode.success
 
 
-# ================== Phone OTP ==================
-@authen_bp.route("/login/phone/otp", methods=["POST"])
-def request_phone_otp():
-    """
-    Gửi OTP về số điện thoại để đăng nhập.
-    - Input JSON: { "phone": "..." }
-    - Trả về: { success: true, message: string, code: int, data: {} } nếu gửi OTP thành công
-    """
-    data = request.get_json(silent=True) or {}
-    phone = data.get("phone")
 
-    if not phone:
-        return jsonify(
-            response_error(
-                message="Phone required",
-                code=HttpCode.bad_request,
-                data={}
-            )
-        ), HttpCode.bad_request
 
-    result = LoginService.request_phone_otp(phone)
-    if "error" in result:
-        return jsonify(
-            response_error(
-                message=result["error"],
-                code=HttpCode.bad_request,
-            )
-        ), HttpCode.bad_request
 
-    return jsonify(
-        response_success(
-            message=result.get("message", "OTP sent successfully"),
-            code=HttpCode.success
-        )
-    ), HttpCode.success
-
-@authen_bp.route("/login/phone/verify", methods=["POST"])
-def verify_phone_otp():
-    """
-    Xác thực OTP để đăng nhập bằng số điện thoại.
-    - Input JSON: { "phone": "...", "otp_code": "..." }
-    - Trả về: { success: true, message: string, code: int, data: { session_id, user, access_token, refresh_token, expires_in } } nếu thành công
-    """
-    data = request.get_json(silent=True) or {}
-    phone = data.get("phone")
-    otp_code = data.get("otp_code")
-
-    if not phone or not otp_code:
-        return jsonify(
-            response_error(
-                message="Phone and OTP required",
-                code=HttpCode.bad_request,
-            )
-        ), HttpCode.bad_request
-
-    result = LoginService.login_with_phone_otp(phone, otp_code)
-    if "error" in result:
-        return jsonify(
-            response_error(
-                message=result["error"],
-                code=HttpCode.unauthorized,
-            )
-        ), HttpCode.unauthorized
-
-    return jsonify(
-        response_success(
-            data={
-                "session_id": result["session_id"],
-                "user": result["user"],
-                "access_token": result["access_token"],
-                "refresh_token": result["refresh_token"],
-                "expires_in": result["expires_in"]
-            },
-            message="Login successful",
-            code=HttpCode.success
-        )
-    ), HttpCode.success
 
 # ================== Email ==================
 @authen_bp.route("/login/email/otp", methods=["POST"])
@@ -359,22 +285,21 @@ def register_phone():
     result = RegisterService.register_with_phone(phone, password, otp_code)
     return jsonify(result), result.get("code", 400)
 
-# ================== FORGOT PASSWORD (BẮT BUỘC PHẢI CÓ) ==================
+# ================== FORGOT PASSWORD ==================
 @authen_bp.route("/forgot-password/email/send-otp", methods=["POST"])
 def forgot_password_email_send_otp():
     data = request.get_json() or {}
-    email = data.get("email")
-    if not email: return jsonify(response_error("Email required", code=400)), 400
+    # SỬA: Thêm .strip() và .lower() để xóa khoảng trắng và chuyển thường
+    email = data.get("email", "").strip().lower()
+    
+    if not email: 
+        return jsonify(response_error("Email required", code=400)), 400
+        
     result = LoginService.request_forgot_password_email(email)
-    return jsonify(result), result.get("code", 400) if "error" in result else 200
-
-@authen_bp.route("/forgot-password/phone/send-otp", methods=["POST"])
-def forgot_password_phone_send_otp():
-    data = request.get_json() or {}
-    phone = data.get("phone")
-    if not phone: return jsonify(response_error("Phone required", code=400)), 400
-    result = LoginService.request_forgot_password_phone(phone)
-    return jsonify(result), result.get("code", 400) if "error" in result else 200
+    
+    # Kiểm tra result trả về để response đúng HTTP code
+    status_code = 400 if "error" in result else 200
+    return jsonify(result), status_code
 
 @authen_bp.route("/forgot-password/email/reset", methods=["POST"])
 def forgot_password_email_reset():

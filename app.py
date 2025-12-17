@@ -24,7 +24,17 @@ app = Flask(__name__)
 # ========== Cấu hình JWT ==========
 app.config["JWT_SECRET_KEY"] = JWT_SECRET_KEY
 jwt = JWTManager(app)
-CORS(app, supports_credentials=True)
+
+# ========== [ĐÃ SỬA] CẤU HÌNH CORS ==========
+# Thêm "PATCH" vào danh sách methods để sửa lỗi Network Error khi đổi mật khẩu
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"], 
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})
 
 # ========== Đăng ký các blueprint ==========
 app.register_blueprint(authen_bp, url_prefix="/authen")
@@ -32,7 +42,7 @@ app.register_blueprint(author_bp, url_prefix="/author")
 app.register_blueprint(user_bp, url_prefix="/users")
 app.register_blueprint(sign_bp, url_prefix="/sign")
 app.register_blueprint(drowsy_bp, url_prefix="/drowsy")
-app.register_blueprint(profile_bp, url_prefix="/profile")  # <-- 2. THÊM DÒNG NÀY
+app.register_blueprint(profile_bp, url_prefix="/profile")
 app.register_blueprint(object_bp, url_prefix="/object")
 
 # ========== TEST Connection ==========

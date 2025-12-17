@@ -2,151 +2,64 @@ from sqlalchemy.exc import SQLAlchemyError
 from flask_jwt_extended import create_access_token, create_refresh_token
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import timedelta
-import jwt
 
+import logger
 from models.user import User
 from services.authen.otp_service import OTPService
 from services.authen.session_service import SessionService
-from config import REFRESH_SECRET_KEY
 from database import db
-
 
 class LoginService:
 
-    # ================== LOGIN FLOW ==================
-
     @staticmethod
-    def login_with_username(username, password):
-        """
-        Đăng nhập bằng username + password.
-        """
+    def login_with_username(username, password, request):
         user = User.query.filter_by(username=username).first()
         if not user or not check_password_hash(user.password_hash, password):
-            return {"error": "Invalid username or password"}
-
-        return LoginService._generate_token(user)
+            return {"error": "Tên đăng nhập hoặc mật khẩu không đúng"}
+        return LoginService._generate_token(user, request)
 
     @staticmethod
     def request_phone_otp(phone: str):
-        """Gửi OTP đăng nhập cho user theo phone."""
-        # Gọi hàm send_phone_otp (purpose='login' mặc định)
-        return OTPService.send_phone_otp(phone)
+        # [FIX] Thêm purpose="login"
+        return OTPService.send_phone_otp(phone, purpose="login")
 
     @staticmethod
-    def login_with_phone_otp(phone: str, otp_code: str):
-        """
-        Xác thực OTP và trả token.
-        """
-        # SỬA: Gọi đúng hàm verify_phone_otp
+    def login_with_phone_otp(phone: str, otp_code: str, request):
+        # [FIX] Thêm purpose="login" và truyền request xuống _generate_token
         user_or_error = OTPService.verify_phone_otp(phone, otp_code, purpose="login")
         
         if isinstance(user_or_error, dict) and "error" in user_or_error:
             return user_or_error
 
-        return LoginService._generate_token(user_or_error)
+        return LoginService._generate_token(user_or_error, request)
 
     @staticmethod
     def request_email_otp(email: str):
-        """Gửi OTP đăng nhập cho email."""
-        return OTPService.send_email_otp(email)
+        return OTPService.send_email_otp(email, purpose="login")
 
     @staticmethod
-    def login_with_email(email: str, password: str, otp_code: str = None):
-        """
-        Đăng nhập bằng email + password + OTP (nếu cấu hình yêu cầu).
-        """
-        # SỬA: Gọi đúng verify_email_otp (hàm này check pass + otp)
+    def login_with_email(email: str, password: str, request, otp_code: str = None):
+        # [FIX] Thêm purpose="login" và truyền request
         user_or_error = OTPService.verify_email_otp(email, password, otp_code, purpose="login")
-        
         if isinstance(user_or_error, dict) and "error" in user_or_error:
             return user_or_error
 
-        return LoginService._generate_token(user_or_error)
+        return LoginService._generate_token(user_or_error, request)
 
-    # ================== FORGOT PASSWORD FLOW ==================
-    # (Sử dụng các hàm chuyên biệt từ OTPService mới)
-
+    # ================== Internal helpers ==================
     @staticmethod
-    def request_forgot_password_email(email: str):
-        """
-        Gửi OTP phục hồi mật khẩu qua email.
-        """
-        # Gọi hàm chuyên biệt, nó tự handle check user tồn tại
-        return OTPService.send_forgot_password_otp(email)
+    def _generate_token(user, request):
+        if not hasattr(user, 'id'):
+             return {"error": "Dữ liệu người dùng không hợp lệ"}
 
-    @staticmethod
-    def reset_password_email(email: str, otp_code: str, new_password: str):
-        """
-        Xác thực OTP và cập nhật mật khẩu mới qua email.
-        """
-        try:
-            # 1. Verify OTP (Dùng hàm verify_forgot_password_otp để KHÔNG check pass cũ)
-            user_or_error = OTPService.verify_forgot_password_otp(email, otp_code)
-            
-            if isinstance(user_or_error, dict) and "error" in user_or_error:
-                return user_or_error
-
-            # 2. Update Password
-            user = user_or_error
-            user.password_hash = generate_password_hash(new_password)
-            db.session.commit()
-
-            return {"success": True, "message": "Password has been reset successfully."}
-
-        except Exception as e:
-            db.session.rollback()
-            return {"error": f"Internal server error: {str(e)}"}
-
-    @staticmethod
-    def request_forgot_password_phone(phone: str):
-        """
-        Gửi OTP phục hồi mật khẩu qua số điện thoại.
-        """
-        return OTPService.send_forgot_password_otp(phone)
-
-    @staticmethod
-    def reset_password_phone(phone: str, otp_code: str, new_password: str):
-        """
-        Xác thực OTP và cập nhật mật khẩu mới qua phone.
-        """
-        try:
-            # 1. Verify OTP
-            user_or_error = OTPService.verify_forgot_password_otp(phone, otp_code)
-            
-            if isinstance(user_or_error, dict) and "error" in user_or_error:
-                return user_or_error
-
-            # 2. Update Password
-            user = user_or_error
-            user.password_hash = generate_password_hash(new_password)
-            db.session.commit()
-
-            return {"success": True, "message": "Password has been reset successfully."}
-
-        except Exception as e:
-            db.session.rollback()
-            return {"error": f"Internal server error: {str(e)}"}
-
-    # ================== INTERNAL HELPERS ==================
-
-    @staticmethod
-    def _generate_token(user):
-        """
-        Sinh access token + refresh token, lưu session.
-        """
         access_expires = timedelta(minutes=15)
         refresh_expires = timedelta(days=7)
 
-        access_token = create_access_token(
-            identity=str(user.id),
-            expires_delta=access_expires
-        )
-        refresh_token = create_refresh_token(
-            identity=str(user.id),
-            expires_delta=refresh_expires
-        )
+        access_token = create_access_token(identity=str(user.id), expires_delta=access_expires)
+        refresh_token = create_refresh_token(identity=str(user.id), expires_delta=refresh_expires)
 
-        session_id = SessionService.create_session(user.id, refresh_token)
+        # [FIX] Đã có request để lấy User-Agent hash
+        session_id = SessionService.create_session(user.id, refresh_token, request=request)
 
         return {
             "success": True,
@@ -154,39 +67,55 @@ class LoginService:
             "refresh_token": refresh_token,
             "expires_in": access_expires.total_seconds(),
             "session_id": session_id,
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email,
-                "phone": user.phone,
-                "display_name": user.display_name,
-            },
+            "user": user.to_dict()
         }
 
     @staticmethod
-    def refresh_access_token(refresh_token: str):
-        if not SessionService.validate_session(refresh_token):
-            return {"error": "Invalid or revoked refresh token"}
-
+    def refresh_access_token(session):
         try:
-            payload = jwt.decode(refresh_token, REFRESH_SECRET_KEY, algorithms=["HS256"])
-            user_id = payload.get("id") # Lưu ý: payload có thể khác tùy jwt implementation của bạn
-            # Nếu identity là string (user_id), jwt-extended sẽ decode ra string 'sub'.
-            # Nếu identity là dict, nó sẽ nằm trong 'sub'.
-            # Đoạn này giữ nguyên theo code cũ của bạn nếu nó đang chạy đúng.
-            
-            # Giả sử identity là user_id (string)
             new_access_token = create_access_token(
-                identity=payload.get("sub"), 
+                identity=str(session.user_id),
                 expires_delta=timedelta(minutes=15)
             )
-            return {"access_token": new_access_token}
-
-        except jwt.ExpiredSignatureError:
-            return {"error": "Refresh token expired"}
-        except jwt.InvalidTokenError:
-            return {"error": "Invalid refresh token"}
+            return {"access_token": new_access_token, "expires_in": 15 * 60}
+        except Exception:
+            return {"error": "Lỗi máy chủ nội bộ"}
 
     @staticmethod
     def logout(session_id: str):
         return SessionService.revoke_session(session_id)
+    
+    # ================== QUÊN MẬT KHẨU ==================
+    @staticmethod
+    def request_forgot_password_email(email: str):
+        user = User.query.filter_by(email=email).first()
+        if not user: return {"error": "Email không tồn tại trong hệ thống"}
+        # Dùng purpose='reset' để khớp với Enum của bạn
+        return OTPService.send_email_otp(email, purpose="reset")
+
+    @staticmethod
+    def reset_password_email(email: str, otp_code: str, new_password: str):
+        # Dùng purpose='reset'
+        check = OTPService.validate_otp_only(email, otp_code, purpose="reset")
+        if not check["valid"]: return {"error": check["error"]}
+        
+        user = User.query.filter_by(email=email).first()
+        user.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+        return {"success": True, "message": "Đặt lại mật khẩu thành công"}
+
+    @staticmethod
+    def request_forgot_password_phone(phone: str):
+        user = User.query.filter_by(phone=phone).first()
+        if not user: return {"error": "Số điện thoại không tồn tại"}
+        return OTPService.send_phone_otp(phone, purpose="reset")
+
+    @staticmethod
+    def reset_password_phone(phone: str, otp_code: str, new_password: str):
+        check = OTPService.validate_otp_only(phone, otp_code, purpose="reset")
+        if not check["valid"]: return {"error": check["error"]}
+
+        user = User.query.filter_by(phone=phone).first()
+        user.password_hash = generate_password_hash(new_password)
+        db.session.commit()
+        return {"success": True, "message": "Đặt lại mật khẩu thành công"}

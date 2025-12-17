@@ -8,30 +8,25 @@ from type.http_constants import HttpCode
 
 class RegisterService:
 
-    # ================= QUAN TRỌNG: HÀM MỚI THÊM VÀO =================
     @staticmethod
     def send_otp_for_register(email: str):
         """
         Gửi OTP để đăng ký tài khoản mới.
-        Điều kiện: Email CHƯA tồn tại trong hệ thống.
         """
-        # 1. Kiểm tra Email đã tồn tại chưa
         existing = User.query.filter_by(email=email).first()
         if existing:
             return response_error(message="Email này đã được sử dụng. Vui lòng đăng nhập.", code=HttpCode.conflict)
 
-        # 2. Gửi OTP với purpose='register'
-        # (Đảm bảo DB cột purpose đã có giá trị 'register')
+        # Gửi OTP với purpose='register'
         OTPService.create_and_send_otp(email, "email", purpose="register")
         
         return response_success(message="Mã OTP đã được gửi tới email của bạn.", code=HttpCode.success)
-    # ================================================================
 
     @staticmethod
     def register_with_username(username: str, password: str):
         existing = User.query.filter_by(username=username).first()
         if existing:
-            return response_error(message="Username already exists", code=HttpCode.conflict)
+            return response_error(message="Tên đăng nhập đã tồn tại", code=HttpCode.conflict)
 
         user = User(
             username=username,
@@ -41,55 +36,70 @@ class RegisterService:
         try:
             db.session.add(user)
             db.session.commit()
-            return response_success(data=user.to_dict(), key="user", message="User created", code=HttpCode.created)
+            return response_success(data=user.to_dict(), key="user", message="Đăng ký thành công", code=HttpCode.created)
         except SQLAlchemyError as e:
             db.session.rollback()
-            return response_error(message=f"Database error: {str(e)}", code=HttpCode.internal_server_error)
+            return response_error(message=f"Lỗi cơ sở dữ liệu: {str(e)}", code=HttpCode.internal_server_error)
 
     @staticmethod
     def register_with_email(email: str, password: str, otp_code: str):
-        # 1. Validate OTP (purpose="register")
-        # Lưu ý: Frontend đang gọi Register nên purpose phải là 'register' để khớp với lúc gửi
+        # 1. Validate OTP
         check = OTPService.validate_otp_only(email, otp_code, purpose="register") 
         if not check["valid"]:
-            return response_error(message=check.get("error", "Invalid OTP"), code=HttpCode.bad_request)
+            return response_error(message=check.get("error", "Mã OTP không hợp lệ"), code=HttpCode.bad_request)
 
-        # 2. Check Email tồn tại (Check lại lần nữa cho chắc)
+        # 2. Check Email tồn tại
         existing = User.query.filter_by(email=email).first()
         if existing:
-            return response_error(message="Email already exists", code=HttpCode.conflict)
+            return response_error(message="Email đã tồn tại", code=HttpCode.conflict)
 
+        # Tạo username từ email (lấy phần trước @)
         local_part = email.split("@")[0]
-        user_name = local_part.split(".")[0] if "." in local_part else local_part
+        # Xử lý tên hiển thị
         display_name = local_part.split(".")[0] if "." in local_part else local_part
 
+        # [QUAN TRỌNG] Sửa user_name thành username ở dòng dưới đây
         user = User(
             email=email,
-            user_name=user_name,
+            username=local_part,  # <--- ĐÃ SỬA: Dùng 'username' cho đúng Model
             display_name=display_name,
             password_hash=generate_password_hash(password)
         )
         try:
             db.session.add(user)
             db.session.commit()
-            return response_success(data=user.to_dict(), key="user", message="User created", code=HttpCode.created)
+            return response_success(data=user.to_dict(), key="user", message="Đăng ký thành công", code=HttpCode.created)
+        
         except SQLAlchemyError as e:
             db.session.rollback()
-            return response_error(message=f"Database error: {str(e)}", code=HttpCode.internal_server_error)
+            # Xử lý trường hợp username (tự sinh) bị trùng
+            if "Duplicate entry" in str(e) and "users.username" in str(e):
+                # Nếu trùng username tự sinh, thử thêm số ngẫu nhiên vào sau
+                import random
+                try:
+                    user.username = f"{local_part}{random.randint(100, 999)}"
+                    db.session.add(user)
+                    db.session.commit()
+                    return response_success(data=user.to_dict(), key="user", message="Đăng ký thành công", code=HttpCode.created)
+                except Exception:
+                    pass
+                return response_error(message="Tên người dùng tự sinh từ email đã tồn tại. Vui lòng thử email khác.", code=HttpCode.conflict)
+            
+            return response_error(message=f"Lỗi hệ thống: {str(e)}", code=HttpCode.internal_server_error)
 
     @staticmethod
     def register_with_phone(phone: str, password: str, otp_code: str):
-        # (Logic giữ nguyên hoặc xóa nếu bạn đã bỏ đăng ký bằng phone ở Frontend)
         check = OTPService.validate_otp_only(phone, otp_code, purpose="register")
         if not check["valid"]:
             return response_error(message=check.get("error", "Invalid OTP"), code=HttpCode.bad_request)
 
         existing = User.query.filter_by(phone=phone).first()
         if existing:
-            return response_error(message="Phone already exists", code=HttpCode.conflict)
+            return response_error(message="Số điện thoại đã tồn tại", code=HttpCode.conflict)
 
         user = User(
             phone=phone,
+            username=phone, # Dùng số điện thoại làm username
             password_hash=generate_password_hash(password)
         )
         try:
@@ -99,7 +109,7 @@ class RegisterService:
             user.display_name = f"user{user.id}"
             db.session.commit()
 
-            return response_success(data=user.to_dict(), key="user", message="User created", code=HttpCode.created)
+            return response_success(data=user.to_dict(), key="user", message="Đăng ký thành công", code=HttpCode.created)
         except SQLAlchemyError as e:
             db.session.rollback()
             return response_error(message=f"Database error: {str(e)}", code=HttpCode.internal_server_error)

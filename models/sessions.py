@@ -9,14 +9,21 @@ class UserSession(db.Model):
     user_id = db.Column(db.BigInteger, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     token_hash = db.Column(db.String(64), unique=True, nullable=False)
+    
+    # [QUAN TRỌNG] Các cột mới cần thêm để khớp với Service
+    user_agent_hash = db.Column(db.String(64), nullable=True)
+    refresh_count = db.Column(db.Integer, default=0)
+    last_refresh_at = db.Column(db.DateTime, nullable=True)
 
-    issued_at = db.Column(db.DateTime, default=datetime.now())
+    issued_at = db.Column(db.DateTime, default=datetime.now)
     expires_at = db.Column(db.DateTime, nullable=True)
 
     revoked = db.Column(db.Boolean, default=False)
     
-    updated_at = db.Column(db.DateTime, default=datetime.now(), onupdate=datetime.now())
-    created_at = db.Column(db.DateTime, default=datetime.now())  
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.now)  
+    
+    # Relationship
     user = db.relationship("User", backref="sessions")
 
     def is_active(self):

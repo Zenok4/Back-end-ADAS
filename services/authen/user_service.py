@@ -8,7 +8,7 @@ from type.http_constants import HttpCode
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy import or_
 from services.authen.otp_service import OTPService  # Import OTPService
-
+from models.car import Car
 try:
     from werkzeug.security import generate_password_hash
 except ImportError:
@@ -203,60 +203,61 @@ class UserService:
     # =============== UPDATE USER ===============
     @staticmethod
     def update_user(user_id, data, current_user_level=0, is_self_update=False):
-        """
-        Cập nhật thông tin user.
-        - is_self_update (bool): Nếu True, bỏ qua kiểm tra level (dùng cho user tự sửa profile).
-        """
         try:
             user = User.query.get(user_id)
             if not user:
                 return response_error("User not found", HttpCode.not_found)
 
-            # === KIỂM TRA LEVEL (Chỉ chạy khi KHÔNG phải tự update) ===
             if not is_self_update:
                 target_user_level = UserService._get_user_max_level(user)
                 if target_user_level >= current_user_level:
-                    return response_error(
-                        f"Không đủ quyền hạn. Bạn (Lv.{current_user_level}) không thể chỉnh sửa người dùng có cấp độ cao hơn hoặc bằng ({target_user_level}).", 
-                        HttpCode.forbidden
-                    )
-            # ==========================================================
+                    return response_error("Không đủ quyền hạn.", HttpCode.forbidden)
 
-            # Danh sách các trường được phép update
-            allowed_fields = [
-                "username", "email", "phone", "display_name",
-                "address", "vehicle_name", "license_plate"
-            ]
-
-            for key in allowed_fields:
-                if key in data: # Chỉ update nếu có trong data gửi lên (kể cả gửi lên None)
+            # 1. Cập nhật thông tin User (Bao gồm Address)
+            user_fields = ["username", "email", "phone", "display_name", "address"]
+            for key in user_fields:
+                if key in data:
                     setattr(user, key, data[key])
+
+            # 2. Cập nhật thông tin Car (Bảng cars)
+            v_name = data.get("vehicle_name")
+            l_plate = data.get("license_plate")
+
+            # Nếu có gửi thông tin xe
+            if v_name is not None or l_plate is not None:
+                car = Car.query.filter_by(user_id=user.id).first()
+                
+                if car:
+                    # Update xe cũ
+                    if v_name is not None: car.vehicle_name = v_name
+                    if l_plate is not None: car.license_plate = l_plate
+                else:
+                    # Tạo xe mới (Yêu cầu phải có biển số)
+                    if l_plate:
+                        new_car = Car(
+                            user_id=user.id,
+                            vehicle_name=v_name if v_name else "",
+                            license_plate=l_plate
+                        )
+                        db.session.add(new_car)
 
             db.session.commit()
             
             return response_success(
-                user.to_dict(),
-                message="User updated successfully"
+                user.to_dict(include_roles=True),
+                message="Profile updated successfully"
             )
 
         except IntegrityError as e:
             db.session.rollback()
-            error_message = str(e.orig).lower()
-            if "user.username" in error_message:
-                return response_error("Username already exists", HttpCode.bad_request)
-            if "email" in error_message:
-                return response_error("Email này đã được sử dụng, vui lòng chọn email khác.", HttpCode.bad_request)
-            if "phone" in error_message:
-                return response_error("Số điện thoại này đã được sử dụng.", HttpCode.bad_request)
-            return response_error(f"Duplicate entry error: {error_message}", HttpCode.bad_request)
+            err = str(e.orig).lower()
+            if "license_plate" in err: # Bắt lỗi trùng biển số
+                return response_error("Biển số xe này đã tồn tại", HttpCode.bad_request)
+            return response_error(f"Dữ liệu bị trùng lặp: {err}", HttpCode.bad_request)
 
-        except SQLAlchemyError as e:
-            db.session.rollback()
-            return response_error(f"Database error: {str(e)}", HttpCode.internal_server_error)
         except Exception as e:
             db.session.rollback()
-            return response_error(f"Update failed: {str(e)}", HttpCode.internal_server_error)
-
+            return response_error(f"Lỗi hệ thống: {str(e)}", HttpCode.internal_server_error)
 
     # =============== DELETE USER ===============
     @staticmethod

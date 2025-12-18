@@ -6,9 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from database import db
 from models.sessions import UserSession
-
-from config import SECRET_KEY
-
+from config import SECRET_KEY # Đảm bảo bạn có SECRET_KEY trong config.py
 
 class SessionService:
 
@@ -107,7 +105,8 @@ class SessionService:
         """
         session = UserSession.query.filter_by(session_id=session_id, revoked=False).first()
         if not session:
-            return {"error": "Session not found or already revoked"}
+            # Nếu không tìm thấy session hoặc đã revoke rồi thì coi như logout thành công
+            return {"success": True, "message": "Session already revoked or not found"}
 
         session.revoked = True
         db.session.commit()

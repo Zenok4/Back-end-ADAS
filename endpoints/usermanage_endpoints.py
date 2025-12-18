@@ -1,9 +1,9 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from services.authen.user_service import UserService
 from type.http_constants import HttpCode
 from helper.normalization_response import response_error
 from helper.check_constraints_roles import get_current_user_highest_level
-from flask_jwt_extended import jwt_required
 
 user_bp = Blueprint("user_bp", __name__, url_prefix="/users")
 
@@ -226,25 +226,55 @@ def toggle_user_status(user_id):
         )), HttpCode.internal_server_error
 
 
-# ================== CHANGE PASSWORD ==================
+# ================== SEND OTP FOR CHANGE PASSWORD (MỚI) ==================
+@user_bp.route("/change-password/send-otp", methods=["POST"])
+@jwt_required()
+def send_otp_change_password():
+    """
+    Input JSON: { "channel": "email" } hoặc { "channel": "phone" }
+    """
+    try:
+        current_user_id = get_jwt_identity()
+        data = request.get_json(silent=True) or {}
+        channel = data.get("channel", "email") # Mặc định là email
+
+        result = UserService.send_otp_for_change_password(int(current_user_id), channel)
+        
+        if not result.get("success"):
+            return jsonify(result), result.get("code", HttpCode.bad_request)
+        return jsonify(result), result.get("code", HttpCode.success)
+    except Exception as e:
+        return jsonify(response_error(
+            message=f"Internal server error: {e}",
+            code=HttpCode.internal_server_error
+        )), HttpCode.internal_server_error
+
+# ================== CHANGE PASSWORD (CÓ OTP) ==================
 @user_bp.route("/change-password/<int:user_id>", methods=["PATCH"])
 @jwt_required()
 def change_password(user_id):
     """
-    Đổi mật khẩu của người dùng.
-    - Input JSON:
-        {
-            "old_password": "mật khẩu cũ",
-            "new_password": "mật khẩu mới"
+    Đổi mật khẩu của người dùng (yêu cầu OTP).
+    - Input JSON: 
+        { 
+            "old_password": "...", 
+            "new_password": "...",
+            "otp_code": "..." 
         }
-    - Trả về:
-        { success: boolean, message: ..., code: int, data: { id } }
     """
+    # 1. BẢO MẬT: Kiểm tra người gọi API có phải là chính chủ không
+    current_user_id = get_jwt_identity()
+    if int(current_user_id) != user_id:
+         return jsonify(response_error("Unauthorized action: You can only change your own password", code=HttpCode.forbidden)), HttpCode.forbidden
+
     data = request.get_json(silent=True) or {}
     try:
+        # Gọi Service Change Password (đã cập nhật logic check OTP)
         result = UserService.change_password(user_id, data)
+        
         if not result.get("success"):
             return jsonify(result), result.get("code", HttpCode.bad_request)
+            
         return jsonify(result), result.get("code", HttpCode.success)
     except Exception as e:
         return jsonify(response_error(

@@ -9,6 +9,11 @@ class UserSession(db.Model):
     user_id = db.Column(db.BigInteger, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
 
     token_hash = db.Column(db.String(64), unique=True, nullable=False)
+    
+    # [QUAN TRỌNG] Các cột mới cần thêm để khớp với Service
+    user_agent_hash = db.Column(db.String(64), nullable=True)
+    refresh_count = db.Column(db.Integer, default=0)
+    last_refresh_at = db.Column(db.DateTime, nullable=True)
 
     user_agent_hash = db.Column(db.String(64), nullable=False)
 

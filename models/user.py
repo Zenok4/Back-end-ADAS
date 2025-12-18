@@ -13,8 +13,10 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)
     display_name = db.Column(db.String(255))
     is_active = db.Column(db.Boolean, nullable=False, default=True)
-    updated_at = db.Column(db.DateTime, default=datetime.now(), onupdate=datetime.now())
-    created_at = db.Column(db.DateTime, default=datetime.now())
+    
+    # === SỬA TẠI ĐÂY: Bỏ dấu ngoặc () sau datetime.now ===
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
     roles = db.relationship(
         "Role",

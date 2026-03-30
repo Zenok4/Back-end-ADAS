@@ -15,6 +15,19 @@ from services.history.trip_service import TripHistoryService
 class DetectTripService:
 
     @staticmethod
+    def _resolve_event_severity(event_type: str, payload: dict | None) -> str:
+        if not payload:
+            return "warning"
+
+        if event_type == "object":
+            summary = payload.get("collision_summary") or {}
+            highest = summary.get("highest_severity")
+            if highest in ("safe", "low", "medium", "high", "critical"):
+                return highest
+
+        return "warning"
+
+    @staticmethod
     def handle_detect_context(
         *,
         user_id: Optional[int],
@@ -33,10 +46,11 @@ class DetectTripService:
         try:
 
             # Detection event (BẮT BUỘC severity)
+            severity = DetectTripService._resolve_event_severity(event_type, payload)
             event = DetectionEvent(
                 user_id=user_id,
                 event_type=event_type,
-                severity="warning",
+                severity=severity,
                 event_time=captured_at,
                 payload=payload
             )
@@ -86,6 +100,7 @@ class DetectTripService:
                             confidence=det.get("confidence")
                         ))
 
+        
             # COMMIT DUY NHẤT
             db.session.commit()
 

@@ -6,7 +6,8 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from database import db
 from models.sessions import UserSession
-from config import SECRET_KEY # Đảm bảo bạn có SECRET_KEY trong config.py
+from config import SECRET_KEY
+from services.audit_log_service import AuditLogService 
 
 class SessionService:
 
@@ -47,6 +48,13 @@ class SessionService:
 
         db.session.add(session)
         db.session.commit()
+        AuditLogService.log_action(
+            user_id=user_id,
+            action="LOGIN",
+            object_type="SESSION",
+            object_id=session_id,
+            session_id=session_id
+        )
         return session_id
     
     @staticmethod
@@ -110,6 +118,13 @@ class SessionService:
 
         session.revoked = True
         db.session.commit()
+        AuditLogService.log_action(
+            user_id=session.user_id,
+            action="LOGOUT",
+            object_type="SESSION",
+            object_id=session_id,
+            session_id=session_id
+        )
 
         return {"success": True, "message": "Logged out successfully"}
     
@@ -152,6 +167,14 @@ class SessionService:
         if session.user_agent_hash != current_hash:
             session.revoked = True
             db.session.commit()
+            AuditLogService.log_action(
+                user_id=session.user_id,
+                action="FORCE_LOGOUT",
+                object_type="SESSION",
+                object_id=session.session_id,
+                session_id=session.session_id,
+                meta_data={"reason": "User-Agent mismatch"}
+            )
             return False
 
         return True

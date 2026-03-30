@@ -6,6 +6,7 @@ from services.authen.session_service import SessionService
 from services.authen.user_service import UserService
 from type.http_constants import HttpCode
 from helper.normalization_response import response_error, response_success
+from services.audit_log_service import AuditLogService
 
 authen_bp = Blueprint("authen_bp", __name__, url_prefix="/authen")
 
@@ -32,7 +33,8 @@ def login_username():
                 code=HttpCode.unauthorized
             )
         ), HttpCode.unauthorized
-
+    if "error" in result:
+        AuditLogService.log_action(user_id=None, action="LOGIN_FAILED", object_type="USER", object_id=username, meta_data={"error": result["error"]})
     return jsonify(response_success(data=result, message="Đăng nhập thành công", code=HttpCode.success)), HttpCode.success
 
 
@@ -48,7 +50,8 @@ def request_phone_otp():
     result = LoginService.request_phone_otp(phone)
     if "error" in result:
         return jsonify(response_error(result["error"], code=HttpCode.bad_request)), HttpCode.bad_request
-
+    if result.get("success"):
+        AuditLogService.log_action(user_id=None, action="RESET_PASSWORD", object_type="USER", object_id=phone)
     return jsonify(response_success(message=result.get("message", "OTP sent"), code=HttpCode.success)), HttpCode.success
 
 @authen_bp.route("/login/phone/verify", methods=["POST"])
@@ -190,11 +193,11 @@ def logout():
     if SessionService.validate_session_context(session, request) is False:
         return jsonify(response_error("Phát hiện truy cập bất thường (User-Agent thay đổi)", code=HttpCode.unauthorized)), HttpCode.unauthorized
 
-    result = LoginService.refresh_access_token(session)
+    result = SessionService.logout(session_id)
     if "error" in result:
         return jsonify(response_error(result["error"], code=HttpCode.internal_server_error)), HttpCode.internal_server_error
 
-    return jsonify(response_success(data=result, message="Làm mới token thành công", code=HttpCode.success)), HttpCode.success
+    return jsonify(response_success(data=result, message="Đăng xuất thành công", code=HttpCode.success)), HttpCode.success
 
 ## ================== Me (Current User) ==================
 @authen_bp.route("/me", methods=["GET"])
@@ -279,6 +282,8 @@ def forgot_password_email_send_otp():
     
     # Kiểm tra result trả về để response đúng HTTP code
     status_code = 400 if "error" in result else 200
+    if result.get("success"):
+        AuditLogService.log_action(user_id=None, action="RESET_PASSWORD", object_type="USER", object_id=email)
     return jsonify(result), status_code
 
 @authen_bp.route("/forgot-password/email/reset", methods=["POST"])

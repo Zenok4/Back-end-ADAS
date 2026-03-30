@@ -1,5 +1,6 @@
 import sys
 from flask import Blueprint, request, jsonify
+from services.audit_log_service import AuditLogService
 from helper.normalization_response import response_error, response_success
 from models.user import User
 from models.user_role import UserRole
@@ -174,7 +175,7 @@ class UserService:
             
             db.session.add(new_user)
             db.session.commit()
-
+            AuditLogService.log_action(user_id=new_user.id, action="CREATE", object_type="USER", object_id=new_user.id)
             return response_success(
                 new_user.to_dict(), 
                 message="User created successfully",
@@ -242,7 +243,7 @@ class UserService:
                         db.session.add(new_car)
 
             db.session.commit()
-            
+            AuditLogService.log_action(user_id=user.id, action="UPDATE", object_type="USER", object_id=user.id)
             return response_success(
                 user.to_dict(include_roles=True),
                 message="Profile updated successfully"
@@ -278,6 +279,7 @@ class UserService:
 
             db.session.delete(user)
             db.session.commit()
+            AuditLogService.log_action(user_id=user_id, action="DELETE", object_type="USER", object_id=user_id)
             return response_success({"id": user_id}, message="User deleted")
 
         except SQLAlchemyError as e:
@@ -311,7 +313,7 @@ class UserService:
 
             user.is_active = bool(is_active)
             db.session.commit()
-
+            AuditLogService.log_action(user_id=user_id, action="UPDATE_STATUS", object_type="USER", object_id=user_id, new_values={"is_active": is_active})
             return response_success(
                 user.to_dict(),
                 message="User status updated successfully"
@@ -365,7 +367,7 @@ class UserService:
             # 4. Hash và lưu mật khẩu mới
             user.password_hash = generate_password_hash(new_password)
             db.session.commit()
-
+            AuditLogService.log_action(user_id=user_id, action="CHANGE_PASSWORD", object_type="USER", object_id=user_id)
             return response_success(
                 {"id": user_id},
                 message="Password changed successfully"

@@ -5,6 +5,7 @@ from models.user_role import UserRole
 from helper.normalization_response import response_error, response_success
 from type.http_constants import HttpCode
 from sqlalchemy import exc
+from services.audit_log_service import AuditLogService
 
 
 class RoleService:
@@ -118,6 +119,7 @@ class RoleService:
             db.session.add(role)
             db.session.commit()
             clear_permissions_cache()
+            AuditLogService.log_action(user_id=None, action="CREATE", object_type="ROLE", object_id=role.id)
             return response_success(role.to_dict(), key="role", message="Role created", code=HttpCode.created)
         except Exception as e:
             db.session.rollback()
@@ -155,6 +157,7 @@ class RoleService:
 
             db.session.commit()
             clear_permissions_cache()
+            AuditLogService.log_action(user_id=None, action="UPDATE", object_type="ROLE", object_id=role.id)
             return response_success(role.to_dict(), key="role", message="Role updated")
         except Exception as e:
             db.session.rollback()
@@ -181,6 +184,7 @@ class RoleService:
             db.session.delete(role)
             db.session.commit()
             clear_permissions_cache()
+            AuditLogService.log_action(user_id=None, action="DELETE", object_type="ROLE", object_id=role_id)
             return response_success({"id": role_id}, key="deleted", message="Role deleted")
         except Exception as e:
             db.session.rollback()
@@ -231,7 +235,7 @@ class RoleService:
 
             db.session.commit()
             clear_permissions_cache()
-
+            AuditLogService.log_action(user_id=user_id, action="ASSIGN_ROLES", object_type="USER", object_id=user_id, new_values={"roles": role_ids})
             return response_success(
                 assigned_roles,
                 key="assigned_roles",

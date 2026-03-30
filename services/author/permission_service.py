@@ -6,6 +6,7 @@ from models.user_role import UserRole
 from models.role import Role
 from helper.normalization_response import response_error, response_success
 from type.http_constants import HttpCode
+from services.audit_log_service import AuditLogService
 
 class PermissionService:
     @staticmethod
@@ -33,6 +34,7 @@ class PermissionService:
         perm = Permission(code=code, title=title, description=description, group_id=group_id)
         db.session.add(perm)
         db.session.commit()
+        AuditLogService.log_action(user_id=None, action="CREATE", object_type="PERMISSION", object_id=perm.id)
         return response_success(perm.to_dict(), key="permission")
 
     @staticmethod
@@ -45,6 +47,7 @@ class PermissionService:
                 setattr(perm, key, value)
         try:
             db.session.commit()
+            AuditLogService.log_action(user_id=None, action="UPDATE", object_type="PERMISSION", object_id=perm.id)
             return response_success(perm.to_dict(), key="permission")
         except Exception as e:
             db.session.rollback()
@@ -57,6 +60,7 @@ class PermissionService:
             return response_error("Permission not found", HttpCode.not_found)
         db.session.delete(perm)
         db.session.commit()
+        AuditLogService.log_action(user_id=None, action="DELETE", object_type="PERMISSION", object_id=perm_id)
         return response_success({"id": perm_id}, key="deleted")
 
     @staticmethod
@@ -80,6 +84,7 @@ class PermissionService:
             role.permissions = new_permissions
             db.session.commit()
             clear_permissions_cache()
+            AuditLogService.log_action(user_id=None, action="ASSIGN_PERMISSIONS", object_type="ROLE", object_id=role_id, new_values={"permissions": perm_ids})
             return response_success(
                 [p.to_dict() for p in new_permissions],
                 key="assigned_permissions",
@@ -138,7 +143,7 @@ class PermissionService:
             db.session.add(binding)
             db.session.commit()
             clear_permissions_cache()
-
+            AuditLogService.log_action(user_id=user_id, action="ASSIGN_ROLE", object_type="USER", object_id=user_id, new_values={"role_id": role_id})
             return response_success(
                 {"user_id": user_id, "role_id": role_id},
                 message="Role assigned to user",

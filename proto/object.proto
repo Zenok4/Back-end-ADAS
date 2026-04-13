@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package object;
+
+service ObjectService {
+  rpc Detect (DetectRequest) returns (DetectResponse);
+}
+
+message DetectRequest {
+  bytes image = 1;
+}
+
+message ObjectData {
+  int32 id = 1;
+  string label = 2;
+  float confidence = 3;
+  repeated float bbox = 4;
+  float speed = 5;
+}
+
+message DetectResponse {
+  repeated ObjectData objects = 1;
+  float processing_time = 2;
+}

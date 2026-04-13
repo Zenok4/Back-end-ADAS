@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package lane;
+
+service LaneService {
+  rpc Predict (LaneRequest) returns (LaneResponse);
+}
+
+message LaneRequest {
+  bytes image = 1;
+}
+
+message LaneData {
+  repeated float box = 1;
+  float confidence = 2;
+  int32 class_id = 3;
+  string class_name = 4;
+}
+
+message LaneMeta {
+  double processing_time = 1;
+}
+
+message LaneResponse {
+  repeated LaneData detections = 1;
+  LaneMeta meta = 2;
+}

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+service SignService {
+  rpc Predict (SignRequest) returns (SignResponse);
+}
+
+message SignRequest {
+  bytes image = 1;
+}
+
+message Detection {
+  repeated float box = 1;
+  float confidence = 2;
+  int32 class_id = 3;
+  string class_name = 4;
+}
+
+message Meta {
+  string start_time = 1;
+  string end_time = 2;
+  float duration_ms = 3;
+}
+
+message SignResponse {
+  repeated Detection detections = 1;
+  Meta meta = 2;
+}

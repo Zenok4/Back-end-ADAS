@@ -59,7 +59,7 @@ pip freeze > requirements.txt
 ```
 
 
-**Generated:** 2025-12-15 19:14:44
+**Generated:** 2026-04-20 14:39:10
 
 ## 📂 Cấu trúc thư mục
 
@@ -74,6 +74,7 @@ Back-end-ADAS/
 ├── 📂 middlewares/
 ├── 📂 migrations/
 ├── 📂 models/
+├── 📂 proto/
 ├── 📂 services/
 ├── 📂 type/
 ├── 📄 .env
@@ -91,25 +92,25 @@ Back-end-ADAS/
 
 ## 🌐 API Endpoints
 
-_47 endpoint(s) found._
+_48 endpoint(s) found._
 
 | Method(s) | Path | Function | File | Description |
 |-----------|------|----------|------|-------------|
-| POST | `/authen/forgot-password/email/reset` | `forgot_password_email_reset()` | `endpoints\authen_enpoints.py` | Reset mật khẩu qua email. |
-| POST | `/authen/forgot-password/email/send-otp` | `forgot_password_email_send_otp()` | `endpoints\authen_enpoints.py` | Gửi OTP phục hồi mật khẩu qua email. |
-| POST | `/authen/forgot-password/phone/reset` | `forgot_password_phone_reset()` | `endpoints\authen_enpoints.py` | Reset mật khẩu qua số điện thoại. |
-| POST | `/authen/forgot-password/phone/send-otp` | `forgot_password_phone_send_otp()` | `endpoints\authen_enpoints.py` | Gửi OTP phục hồi mật khẩu qua số điện thoại. |
-| POST | `/authen/login/email` | `login_email()` | `endpoints\authen_enpoints.py` | Đăng nhập bằng email + password + (OTP nếu có). |
-| POST | `/authen/login/email/otp` | `request_email_otp()` | `endpoints\authen_enpoints.py` | Gửi OTP về email để xác thực. |
-| POST | `/authen/login/phone/otp` | `request_phone_otp()` | `endpoints\authen_enpoints.py` | Gửi OTP về số điện thoại để đăng nhập. |
-| POST | `/authen/login/phone/verify` | `verify_phone_otp()` | `endpoints\authen_enpoints.py` | Xác thực OTP để đăng nhập bằng số điện thoại. |
-| POST | `/authen/login/username` | `login_username()` | `endpoints\authen_enpoints.py` | Đăng nhập bằng username + password. |
+| POST | `/authen/forgot-password/email/reset` | `forgot_password_email_reset()` | `endpoints\authen_enpoints.py` |  |
+| POST | `/authen/forgot-password/email/send-otp` | `forgot_password_email_send_otp()` | `endpoints\authen_enpoints.py` |  |
+| POST | `/authen/forgot-password/phone/reset` | `forgot_password_phone_reset()` | `endpoints\authen_enpoints.py` |  |
+| POST | `/authen/login/email` | `login_email()` | `endpoints\authen_enpoints.py` |  |
+| POST | `/authen/login/email/otp` | `request_email_otp()` | `endpoints\authen_enpoints.py` |  |
+| POST | `/authen/login/phone/otp` | `request_phone_otp()` | `endpoints\authen_enpoints.py` |  |
+| POST | `/authen/login/phone/verify` | `verify_phone_otp()` | `endpoints\authen_enpoints.py` |  |
+| POST | `/authen/login/username` | `login_username()` | `endpoints\authen_enpoints.py` |  |
 | POST | `/authen/logout` | `logout()` | `endpoints\authen_enpoints.py` | Đăng xuất người dùng: thu hồi (revoke) session trong DB. |
 | GET | `/authen/me` | `get_current_user()` | `endpoints\authen_enpoints.py` | Lấy thông tin người dùng hiện tại dựa trên access token (JWT). |
 | POST | `/authen/refresh` | `refresh_token()` | `endpoints\authen_enpoints.py` | Cấp lại access_token mới bằng session_id. |
-| POST | `/authen/register/email` | `register_email()` | `endpoints\authen_enpoints.py` | Đăng ký bằng email + password + OTP. |
-| POST | `/authen/register/phone` | `register_phone()` | `endpoints\authen_enpoints.py` | Đăng ký bằng số điện thoại + OTP. |
-| POST | `/authen/register/username` | `register_username()` | `endpoints\authen_enpoints.py` | Đăng ký bằng username + password. |
+| POST | `/authen/register/email` | `register_email()` | `endpoints\authen_enpoints.py` |  |
+| POST | `/authen/register/email/otp` | `send_otp_register()` | `endpoints\authen_enpoints.py` |  |
+| POST | `/authen/register/phone` | `register_phone()` | `endpoints\authen_enpoints.py` |  |
+| POST | `/authen/register/username` | `register_username()` | `endpoints\authen_enpoints.py` |  |
 | DELETE | `/author/permissions/<int:perm_id>/delete` | `delete_permission()` | `endpoints\author_enpoints.py` | Xóa permission. |
 | GET | `/author/permissions/<int:perm_id>/get` | `get_permission()` | `endpoints\author_enpoints.py` | Lấy chi tiết 1 permission. |
 | PUT | `/author/permissions/<int:perm_id>/update` | `update_permission()` | `endpoints\author_enpoints.py` | Cập nhật permission. |
@@ -134,7 +135,8 @@ _47 endpoint(s) found._
 | POST | `/trip/location` | `record_location()` | `endpoints\trip_endpoints.py` | Ghi nhận vị trí (location) của người dùng trong chuyến đi. |
 | GET | `/trip/summary` | `trip_summary()` | `endpoints\trip_endpoints.py` | Lấy thông tin tổng hợp chuyến đi của người dùng. |
 | GET | `/users/active/<string:is_active>` | `list_users_by_active()` | `endpoints\usermanage_endpoints.py` | Lọc danh sách người dùng theo trạng thái hoạt động. |
-| PATCH | `/users/change-password/<int:user_id>` | `change_password()` | `endpoints\usermanage_endpoints.py` | Đổi mật khẩu của người dùng. |
+| PATCH | `/users/change-password/<int:user_id>` | `change_password()` | `endpoints\usermanage_endpoints.py` | Đổi mật khẩu của người dùng (yêu cầu OTP). |
+| POST | `/users/change-password/send-otp` | `send_otp_change_password()` | `endpoints\usermanage_endpoints.py` | Input JSON: { "channel": "email" } hoặc { "channel": "phone" } |
 | POST | `/users/create` | `create_user()` | `endpoints\usermanage_endpoints.py` | Tạo mới một người dùng. |
 | DELETE | `/users/delete/<int:user_id>` | `delete_user()` | `endpoints\usermanage_endpoints.py` | Xóa một người dùng theo ID. |
 | GET | `/users/id/<int:user_id>` | `get_user_detail()` | `endpoints\usermanage_endpoints.py` | Lấy thông tin chi tiết người dùng theo ID. |

@@ -1,6 +1,6 @@
 import grpc
 
-from helper import decode_image
+from helper.decode_image import decode_image
 from helper.normalization_response import response_success, response_error
 from type.http_constants import HttpCode
 

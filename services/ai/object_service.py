@@ -9,25 +9,41 @@ import proto.object_pb2_grpc as object_pb2_grpc
 
 from config import GRPC_SERVER_URL
 
+
 class ObjectService:
     def __init__(self):
         self.channel = grpc.insecure_channel(GRPC_SERVER_URL)
         self.stub = object_pb2_grpc.ObjectServiceStub(self.channel)
 
-    async def predict_object(self, image_base64: str):
+    async def predict_object(
+        self,
+        image_base64: str,
+        latitude: float = None,
+        longitude: float = None,
+        captured_at=None  # float timestamp
+    ):
         try:
-            # ✅ decode base64 -> bytes
+            # decode base64 -> bytes
             image_bytes = decode_image(image_base64)
 
-            # ✅ build request
+            if isinstance(captured_at, float):
+                ts = captured_at
+            elif captured_at is not None:
+                ts = captured_at.timestamp()
+            else:
+                ts = 0.0
+
+            # gRPC request
             request = object_pb2.DetectRequest(
-                image=image_bytes
+                image=image_bytes,
+                latitude=latitude or 0.0,
+                longitude=longitude or 0.0,
+                captured_at=ts
             )
 
             response = self.stub.Detect(request)
 
             objects = []
-
             for obj in response.objects:
                 objects.append({
                     "id": obj.id,

@@ -8,6 +8,7 @@ from type.http_constants import HttpCode
 object_bp = Blueprint("object", __name__)
 object_service = ObjectService()
 
+
 @object_bp.route("/predict", methods=["POST"])
 async def object_predict():
     try:
@@ -23,30 +24,50 @@ async def object_predict():
         user_id = data.get("user_id")
         latitude = data.get("latitude")
         longitude = data.get("longitude")
-        captured_at = None
+
+        # =========================
+        # 🔥 HANDLE TIME
+        # =========================
         if data.get("captured_at"):
-            captured_at = datetime.fromisoformat(data["captured_at"])
+            captured_at_dt = datetime.fromisoformat(data["captured_at"])
+        else:
+            captured_at_dt = datetime.utcnow()
 
-        # Gọi service
-        result = await object_service.predict_object(base64_img)
+        # Captered_at for AI
+        captured_at_ts = captured_at_dt.timestamp()
 
-        # Kiểm tra lỗi
+        print("Capture At (ts):", captured_at_ts)
+        print("Capture At (dt):", captured_at_dt)
+
+        # =========================
+        # CALL AI
+        # =========================
+        result = await object_service.predict_object(
+            base64_img,
+            latitude,
+            longitude,
+            captured_at_ts  # ✅ float
+        )
+
+        # Handle error from gRPC
         if isinstance(result, dict) and result.get("error"):
             return jsonify(response_error(
                 message=result["error"],
                 code=HttpCode.bad_gateway
             )), HttpCode.bad_gateway
-        
+
+        # =========================
+        # SAVE DB
+        # =========================
         DetectTripService.handle_detect_context(
             user_id=user_id,
             latitude=latitude,
             longitude=longitude,
             event_type="object",
             payload=result.get("data"),
-            captured_at=captured_at
+            captured_at=captured_at_dt  # ✅ datetime
         )
 
-        # Trả về kết quả
         return jsonify({
             "code": HttpCode.success,
             "data": result

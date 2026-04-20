@@ -7,8 +7,7 @@ from database import db
 from type.http_constants import HttpCode
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from sqlalchemy import or_
-from services.authen.otp_service import OTPService  # Import OTPService
-from models.car import Car
+
 try:
     from werkzeug.security import generate_password_hash
 except ImportError:
@@ -186,10 +185,10 @@ class UserService:
             error_message = str(e.orig).lower()
             if "user.username" in error_message:
                 return response_error("Username already exists", HttpCode.bad_request)
-            if "email" in error_message:
-                return response_error("Email này đã được sử dụng, vui lòng chọn email khác.", HttpCode.bad_request)
-            if "phone" in error_message:
-                return response_error("Số điện thoại này đã được sử dụng.", HttpCode.bad_request)
+            if "user.email" in error_message:
+                return response_error("Email already exists", HttpCode.bad_request)
+            if "user.phone" in error_message:
+                return response_error("Phone already exists", HttpCode.bad_request)
             return response_error(f"Duplicate entry error: {error_message}", HttpCode.bad_request)
 
         except SQLAlchemyError as e:
@@ -202,62 +201,50 @@ class UserService:
 
     # =============== UPDATE USER ===============
     @staticmethod
-    def update_user(user_id, data, current_user_level=0, is_self_update=False):
+    def update_user(user_id, data, current_user_level=0):
         try:
             user = User.query.get(user_id)
             if not user:
                 return response_error("User not found", HttpCode.not_found)
 
-            if not is_self_update:
-                target_user_level = UserService._get_user_max_level(user)
-                if target_user_level >= current_user_level:
-                    return response_error("Không đủ quyền hạn.", HttpCode.forbidden)
+            # === KIỂM TRA LEVEL ===
+            target_user_level = UserService._get_user_max_level(user)
+            if target_user_level >= current_user_level:
+                return response_error(
+                    f"Không đủ quyền hạn. Bạn (Lv.{current_user_level}) không thể chỉnh sửa người dùng có cấp độ cao hơn hoặc bằng ({target_user_level}).", 
+                    HttpCode.forbidden
+                )
+            # ======================
 
-            # 1. Cập nhật thông tin User (Bao gồm Address)
-            user_fields = ["username", "email", "phone", "display_name", "address"]
-            for key in user_fields:
-                if key in data:
+            for key in ["username", "email", "phone", "display_name"]:
+                if key in data and data[key]:
                     setattr(user, key, data[key])
-
-            # 2. Cập nhật thông tin Car (Bảng cars)
-            v_name = data.get("vehicle_name")
-            l_plate = data.get("license_plate")
-
-            # Nếu có gửi thông tin xe
-            if v_name is not None or l_plate is not None:
-                car = Car.query.filter_by(user_id=user.id).first()
-                
-                if car:
-                    # Update xe cũ
-                    if v_name is not None: car.vehicle_name = v_name
-                    if l_plate is not None: car.license_plate = l_plate
-                else:
-                    # Tạo xe mới (Yêu cầu phải có biển số)
-                    if l_plate:
-                        new_car = Car(
-                            user_id=user.id,
-                            vehicle_name=v_name if v_name else "",
-                            license_plate=l_plate
-                        )
-                        db.session.add(new_car)
 
             db.session.commit()
             
             return response_success(
-                user.to_dict(include_roles=True),
-                message="Profile updated successfully"
+                user.to_dict(),
+                message="User updated successfully"
             )
 
         except IntegrityError as e:
             db.session.rollback()
-            err = str(e.orig).lower()
-            if "license_plate" in err: # Bắt lỗi trùng biển số
-                return response_error("Biển số xe này đã tồn tại", HttpCode.bad_request)
-            return response_error(f"Dữ liệu bị trùng lặp: {err}", HttpCode.bad_request)
+            error_message = str(e.orig).lower()
+            if "user.username" in error_message:
+                return response_error("Username already exists", HttpCode.bad_request)
+            if "user.email" in error_message:
+                return response_error("Email already exists", HttpCode.bad_request)
+            if "user.phone" in error_message:
+                return response_error("Phone already exists", HttpCode.bad_request)
+            return response_error(f"Duplicate entry error: {error_message}", HttpCode.bad_request)
 
+        except SQLAlchemyError as e:
+            db.session.rollback()
+            return response_error(f"Database error: {str(e)}", HttpCode.internal_server_error)
         except Exception as e:
             db.session.rollback()
-            return response_error(f"Lỗi hệ thống: {str(e)}", HttpCode.internal_server_error)
+            return response_error(f"Update failed: {str(e)}", HttpCode.internal_server_error)
+
 
     # =============== DELETE USER ===============
     @staticmethod
@@ -324,12 +311,9 @@ class UserService:
             return response_error(f"Toggle status failed: {str(e)}", HttpCode.internal_server_error)
 
 
-    # =============== CHANGE PASSWORD (CÓ OTP) ===============
+    # =============== CHANGE PASSWORD ===============
     @staticmethod
     def change_password(user_id, data):
-        """
-        Đổi mật khẩu: Yêu cầu pass cũ + pass mới + OTP.
-        """
         try:
             user = User.query.get(user_id)
             if not user:
@@ -337,33 +321,22 @@ class UserService:
 
             old_password = data.get("old_password")
             new_password = data.get("new_password")
-            otp_code = data.get("otp_code")  # <--- Bắt buộc có OTP
 
-            if not old_password or not new_password or not otp_code:
-                return response_error("Missing required fields (old_password, new_password, otp_code)", HttpCode.bad_request)
+            if not old_password or not new_password:
+                return response_error("Missing required fields", HttpCode.bad_request)
 
-            # 1. Kiểm tra mật khẩu cũ
+            # Kiểm tra mật khẩu cũ
             from werkzeug.security import check_password_hash
             if not check_password_hash(user.password_hash, old_password):
                 return response_error("Old password is incorrect", HttpCode.bad_request)
 
-            # 2. Kiểm tra OTP
-            # Ưu tiên email, nếu không có thì dùng phone
-            identifier = user.email if user.email else user.phone
-            if not identifier:
-                 return response_error("User has no contact info to verify OTP", HttpCode.bad_request)
-
-            # Dùng purpose='change_password'
-            check_otp = OTPService.validate_otp_only(identifier, otp_code, purpose="change_password")
-            if not check_otp["valid"]:
-                return response_error(check_otp["error"], HttpCode.bad_request)
-
-            # 3. Kiểm tra pass mới có trùng pass cũ không
+            # Không cho phép đổi sang mật khẩu cũ (optional)
             if check_password_hash(user.password_hash, new_password):
                 return response_error("New password must be different from old password", HttpCode.bad_request)
 
-            # 4. Hash và lưu mật khẩu mới
+            # Hash mật khẩu mới
             user.password_hash = generate_password_hash(new_password)
+
             db.session.commit()
 
             return response_success(
@@ -382,48 +355,3 @@ class UserService:
         except Exception as e:
             db.session.rollback()
             return response_error(f"Change password failed: {str(e)}", HttpCode.internal_server_error)
-
-    # =============== GỬI OTP ĐỔI MẬT KHẨU ===============
-    @staticmethod
-    def send_otp_for_change_password(user_id, channel="email"):
-        """
-        Gửi OTP về email hoặc sđt để đổi mật khẩu.
-        channel: 'email' hoặc 'phone'
-        """
-        try:
-            user = User.query.get(user_id)
-            if not user:
-                return response_error("User not found", HttpCode.not_found)
-            
-            identifier = None
-            type_id = None
-
-            # Logic chọn kênh gửi
-            if channel == "email":
-                if not user.email:
-                    return response_error("Tài khoản này chưa cập nhật Email.", HttpCode.bad_request)
-                identifier = user.email
-                type_id = "email"
-            elif channel == "phone":
-                if not user.phone:
-                    return response_error("Tài khoản này chưa cập nhật Số điện thoại.", HttpCode.bad_request)
-                identifier = user.phone
-                type_id = "phone"
-            else:
-                # Fallback: Tự động chọn nếu gửi channel linh tinh
-                if user.email:
-                    identifier = user.email
-                    type_id = "email"
-                elif user.phone:
-                    identifier = user.phone
-                    type_id = "phone"
-            
-            if not identifier:
-                 return response_error("User has no contact info to send OTP", HttpCode.bad_request)
-
-            # Gửi OTP với purpose='change_password'
-            OTPService.create_and_send_otp(identifier, type_id, purpose="change_password")
-            
-            return response_success(message=f"OTP sent to {identifier}")
-        except Exception as e:
-            return response_error(f"Error sending OTP: {str(e)}", HttpCode.internal_server_error)

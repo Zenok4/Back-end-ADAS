@@ -8,6 +8,9 @@ service ObjectService {
 
 message DetectRequest {
   bytes image = 1;
+  double latitude = 2;
+  double longitude = 3;
+  double captured_at = 4;
 }
 
 message ObjectData {
@@ -20,5 +23,5 @@ message ObjectData {
 
 message DetectResponse {
   repeated ObjectData objects = 1;
-  float processing_time = 2;
+  double processing_time = 2;
 }

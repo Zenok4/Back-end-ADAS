@@ -14,7 +14,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cobject.proto\x12\x06object\"X\n\rDetectRequest\x12\r\n\x05image\x18\x01 \x01(\x0c\x12\x10\n\x08latitude\x18\x02 \x01(\x01\x12\x11\n\tlongitude\x18\x03 \x01(\x01\x12\x13\n\x0b\x63\x61ptured_at\x18\x04 \x01(\x01\"X\n\nObjectData\x12\n\n\x02id\x18\x01 \x01(\x05\x12\r\n\x05label\x18\x02 \x01(\t\x12\x12\n\nconfidence\x18\x03 \x01(\x02\x12\x0c\n\x04\x62\x62ox\x18\x04 \x03(\x02\x12\r\n\x05speed\x18\x05 \x01(\x02\"N\n\x0e\x44\x65tectResponse\x12#\n\x07objects\x18\x01 \x03(\x0b\x32\x12.object.ObjectData\x12\x17\n\x0fprocessing_time\x18\x02 \x01(\x01\x32H\n\rObjectService\x12\x37\n\x06\x44\x65tect\x12\x15.object.DetectRequest\x1a\x16.object.DetectResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0cobject.proto\x12\x06object\"X\n\rDetectRequest\x12\r\n\x05image\x18\x01 \x01(\x0c\x12\x10\n\x08latitude\x18\x02 \x01(\x01\x12\x11\n\tlongitude\x18\x03 \x01(\x01\x12\x13\n\x0b\x63\x61ptured_at\x18\x04 \x01(\x01\"\xab\x01\n\nObjectData\x12\n\n\x02id\x18\x01 \x01(\x05\x12\r\n\x05label\x18\x02 \x01(\t\x12\x12\n\nconfidence\x18\x03 \x01(\x02\x12\x0c\n\x04\x62\x62ox\x18\x04 \x03(\x02\x12\r\n\x05speed\x18\x05 \x01(\x02\x12\x12\n\ndistance_m\x18\x06 \x01(\x02\x12\r\n\x05ttc_s\x18\x07 \x01(\x02\x12\x15\n\rwarning_level\x18\x08 \x01(\t\x12\x17\n\x0fwarning_message\x18\t \x01(\t\"\x9b\x01\n\x10\x43ollisionWarning\x12\x11\n\tobject_id\x18\x01 \x01(\x05\x12\r\n\x05label\x18\x02 \x01(\t\x12\x12\n\nconfidence\x18\x03 \x01(\x02\x12\x12\n\ndistance_m\x18\x04 \x01(\x02\x12\r\n\x05ttc_s\x18\x05 \x01(\x02\x12\x15\n\rwarning_level\x18\x06 \x01(\t\x12\x17\n\x0fwarning_message\x18\x07 \x01(\t\"\xbb\x01\n\x10\x43ollisionSummary\x12\x15\n\roverall_level\x18\x01 \x01(\t\x12\x17\n\x0foverall_message\x18\x02 \x01(\t\x12\x1e\n\x16highest_risk_object_id\x18\x03 \x01(\x05\x12\x1a\n\x12highest_risk_label\x18\x04 \x01(\t\x12\x1f\n\x17highest_risk_distance_m\x18\x05 \x01(\x02\x12\x1a\n\x12highest_risk_ttc_s\x18\x06 \x01(\x02\"\xa5\x01\n\x0e\x44\x65tectResponse\x12#\n\x07objects\x18\x01 \x03(\x0b\x32\x12.object.ObjectData\x12*\n\x08warnings\x18\x02 \x03(\x0b\x32\x18.object.CollisionWarning\x12)\n\x07summary\x18\x03 \x01(\x0b\x32\x18.object.CollisionSummary\x12\x17\n\x0fprocessing_time\x18\x04 \x01(\x01\x32H\n\rObjectService\x12\x37\n\x06\x44\x65tect\x12\x15.object.DetectRequest\x1a\x16.object.DetectResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -23,10 +23,14 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   _globals['_DETECTREQUEST']._serialized_start=24
   _globals['_DETECTREQUEST']._serialized_end=112
-  _globals['_OBJECTDATA']._serialized_start=114
-  _globals['_OBJECTDATA']._serialized_end=202
-  _globals['_DETECTRESPONSE']._serialized_start=204
-  _globals['_DETECTRESPONSE']._serialized_end=282
-  _globals['_OBJECTSERVICE']._serialized_start=284
-  _globals['_OBJECTSERVICE']._serialized_end=356
+  _globals['_OBJECTDATA']._serialized_start=115
+  _globals['_OBJECTDATA']._serialized_end=286
+  _globals['_COLLISIONWARNING']._serialized_start=289
+  _globals['_COLLISIONWARNING']._serialized_end=444
+  _globals['_COLLISIONSUMMARY']._serialized_start=447
+  _globals['_COLLISIONSUMMARY']._serialized_end=634
+  _globals['_DETECTRESPONSE']._serialized_start=637
+  _globals['_DETECTRESPONSE']._serialized_end=802
+  _globals['_OBJECTSERVICE']._serialized_start=804
+  _globals['_OBJECTSERVICE']._serialized_end=876
 # @@protoc_insertion_point(module_scope)

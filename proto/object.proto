@@ -19,9 +19,35 @@ message ObjectData {
   float confidence = 3;
   repeated float bbox = 4;
   float speed = 5;
+
+  float distance_m = 6;
+  float ttc_s = 7;
+  string warning_level = 8;
+  string warning_message = 9;
+}
+
+message CollisionWarning {
+  int32 object_id = 1;
+  string label = 2;
+  float confidence = 3;
+  float distance_m = 4;
+  float ttc_s = 5;
+  string warning_level = 6;
+  string warning_message = 7;
+}
+
+message CollisionSummary {
+  string overall_level = 1;
+  string overall_message = 2;
+  int32 highest_risk_object_id = 3;
+  string highest_risk_label = 4;
+  float highest_risk_distance_m = 5;
+  float highest_risk_ttc_s = 6;
 }
 
 message DetectResponse {
   repeated ObjectData objects = 1;
-  double processing_time = 2;
+  repeated CollisionWarning warnings = 2;
+  CollisionSummary summary = 3;
+  double processing_time = 4;
 }

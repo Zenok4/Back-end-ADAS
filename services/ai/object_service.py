@@ -50,7 +50,11 @@ class ObjectService:
                     "label": obj.label,
                     "confidence": obj.confidence,
                     "bbox": list(obj.bbox),
-                    "speed": obj.speed
+                    "speed": obj.speed,
+                    "distance": obj.distance_m,
+                    "ttc_s": 22.22,
+                    "warning_level": "low",
+                    "warning_message": "CANH BAO THAP - CO VAT CAN PHIA TRUOC"
                 })
 
             data = {

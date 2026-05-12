@@ -5,7 +5,7 @@ from logger import logger
 import time
 from werkzeug.exceptions import HTTPException
 from type.http_constants import HttpCode
-from config import JWT_SECRET_KEY
+from config import JWT_SECRET_KEY, is_redis_connected, redis_client
 from database import get_mysql_connection
 
 
@@ -19,6 +19,7 @@ from endpoints.profile_endpoints import profile_bp
 from endpoints.object_endpoints import object_bp
 from endpoints.lane_endpoints import lane_bp
 from endpoints.trip_endpoints import trip_bp
+from endpoints.redis_endpoints import redis_bp
 
 from models import init_dtb
 from middlewares.permission_required import permission_required
@@ -40,20 +41,45 @@ app.register_blueprint(profile_bp, url_prefix="/profile")  # <-- 2. THÊM DÒNG 
 app.register_blueprint(object_bp, url_prefix="/object")
 app.register_blueprint(lane_bp, url_prefix="/lane")  # <-- Đăng ký lane endpoints
 app.register_blueprint(trip_bp, url_prefix="/trip")  # <-- Đăng ký trip endpoints
+app.register_blueprint(redis_bp, url_prefix="/redis")  # <-- Đăng ký Redis endpoints
 
 
 # ========== TEST Connection ==========
 def test_connection():
+    results = {
+        "mysql": {"status": "unknown", "message": ""},
+        "redis": {"status": "unknown", "message": ""}
+    }
+    
+    # Test MySQL connection
     try:
         mysql_conn = get_mysql_connection()
         mysql_cursor = mysql_conn.cursor()
         mysql_cursor.execute("SELECT COUNT(*) FROM users")
         mysql_cursor.fetchone()
         mysql_conn.close()
-
-        return {"status": "success", "message": "Database connections successful!"}
+        results["mysql"] = {"status": "success", "message": "MySQL connected successfully"}
     except Exception as e:
-        return {"status": "failed", "error": str(e)}
+        results["mysql"] = {"status": "failed", "message": str(e)}
+    
+    # Test Redis connection
+    try:
+        if is_redis_connected():
+            redis_client.ping()
+            results["redis"] = {"status": "success", "message": "Redis connected successfully"}
+        else:
+            results["redis"] = {"status": "failed", "message": "Redis not connected"}
+    except Exception as e:
+        results["redis"] = {"status": "failed", "message": str(e)}
+    
+    # Check overall status
+    all_success = all(r["status"] == "success" for r in results.values())
+    
+    return {
+        "status": "success" if all_success else "partial",
+        "message": "All connections successful" if all_success else "Some connections failed",
+        "connections": results
+    }
 
 
 @app.route("/test-connection", methods=["GET"])

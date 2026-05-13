@@ -7,6 +7,7 @@ from werkzeug.exceptions import HTTPException
 from type.http_constants import HttpCode
 from config import JWT_SECRET_KEY
 from database import get_mysql_connection
+from redis_client import test_redis_connection
 
 
 # === Import các blueprint ===
@@ -59,9 +60,13 @@ def test_connection():
 @app.route("/test-connection", methods=["GET"])
 def test_connection_api():
     """
-    Kiểm tra kết nối giữa server và database
+    Kiểm tra kết nối giữa server, database và Redis
     """
-    return jsonify(test_connection())
+    result = {
+        "mysql": test_connection(),
+        "redis": test_redis_connection(),
+    }
+    return jsonify(result)
 
 
 ############################################

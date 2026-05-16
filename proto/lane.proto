@@ -21,7 +21,16 @@ message LaneMeta {
   double processing_time = 1;
 }
 
+message LaneDeparture {
+  string status = 1;
+  string message = 2;
+  float lane_offset = 3;
+  LaneData left_lane = 4;
+  LaneData right_lane = 5;
+}
+
 message LaneResponse {
   repeated LaneData detections = 1;
   LaneMeta meta = 2;
+  LaneDeparture lane_departure = 3;
 }

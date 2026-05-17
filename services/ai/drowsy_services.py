@@ -14,12 +14,14 @@ class DrowsyService:
     async def detect_drowsiness(
         self,
         image_base64: str,
+        frame_count: int = 0,
         session_id: str | None = None,
     ):
         try:
             # ----- Gửi JSON sang AI server (không dùng file nữa) -----
             payload = {
                 "image_base64": image_base64,
+                "frame_count": frame_count,
             }
             if session_id is not None:
                 payload["session_id"] = session_id

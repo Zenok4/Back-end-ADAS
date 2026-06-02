@@ -2,7 +2,7 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-import proto.lane_pb2 as lane__pb2
+from proto import lane_pb2 as proto_dot_lane__pb2
 
 
 class LaneServiceStub(object):
@@ -16,8 +16,8 @@ class LaneServiceStub(object):
         """
         self.Predict = channel.unary_unary(
                 '/lane.LaneService/Predict',
-                request_serializer=lane__pb2.LaneRequest.SerializeToString,
-                response_deserializer=lane__pb2.LaneResponse.FromString,
+                request_serializer=proto_dot_lane__pb2.LaneRequest.SerializeToString,
+                response_deserializer=proto_dot_lane__pb2.LaneResponse.FromString,
                 )
 
 
@@ -35,8 +35,8 @@ def add_LaneServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'Predict': grpc.unary_unary_rpc_method_handler(
                     servicer.Predict,
-                    request_deserializer=lane__pb2.LaneRequest.FromString,
-                    response_serializer=lane__pb2.LaneResponse.SerializeToString,
+                    request_deserializer=proto_dot_lane__pb2.LaneRequest.FromString,
+                    response_serializer=proto_dot_lane__pb2.LaneResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -60,7 +60,7 @@ class LaneService(object):
             timeout=None,
             metadata=None):
         return grpc.experimental.unary_unary(request, target, '/lane.LaneService/Predict',
-            lane__pb2.LaneRequest.SerializeToString,
-            lane__pb2.LaneResponse.FromString,
+            proto_dot_lane__pb2.LaneRequest.SerializeToString,
+            proto_dot_lane__pb2.LaneResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)

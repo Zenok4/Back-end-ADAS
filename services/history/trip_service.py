@@ -4,12 +4,21 @@ from sqlalchemy import desc, func, cast, Date, case
 
 from database import db
 from helper.cal_avg_conf import _calc_avg_confidence
-from models.sign_detection import SignDetection
 from models.trip_history import TripHistory
 from models.detection_event import DetectionEvent
-from models.car import Car
 
 class TripHistoryService:
+    @staticmethod
+    def _payload_items(payload):
+        if not isinstance(payload, dict):
+            return []
+
+        for key in ("data", "detections", "objects"):
+            items = payload.get(key)
+            if isinstance(items, list):
+                return items
+
+        return []
 
     @staticmethod
     def list_trips(user_id, start_date=None, end_date=None):
@@ -18,13 +27,12 @@ class TripHistoryService:
         base_query = (
             db.session.query(
                 trip_date,
-                TripHistory.car_id,
                 func.min(TripHistory.captured_at).label("start_time"),
                 func.max(TripHistory.captured_at).label("end_time"),
                 func.count().label("points")
             )
             .filter(TripHistory.user_id == user_id)
-            .group_by(trip_date, TripHistory.car_id)
+            .group_by(trip_date)
             .order_by(desc(trip_date))
         )
 
@@ -49,15 +57,8 @@ class TripHistoryService:
                 trip.end_time
             )
 
-            car = Car.query.get(trip.car_id)
-
             results.append({
                 "date": trip.trip_date.isoformat(),
-                "car": {
-                    "id": car.id,
-                    "name": car.name,
-                    "plate": car.plate_number
-                },
                 "duration_minutes": int(
                     (trip.end_time - trip.start_time).total_seconds() / 60
                 ),
@@ -82,9 +83,7 @@ class TripHistoryService:
         results = []
 
         for e in events:
-
-            if isinstance(e.payload, dict):
-                avg_confidence = _calc_avg_confidence(e.payload)
+            avg_confidence = _calc_avg_confidence(e.payload)
 
             results.append({
                 "id": e.id,
@@ -106,12 +105,12 @@ class TripHistoryService:
         if event_type:
             query = query.filter(DetectionEvent.event_type == event_type)
 
-        total_items = query.count()
-
         if start_date:
             query = query.filter(DetectionEvent.event_time >= start_date)
         if end_date:
             query = query.filter(DetectionEvent.event_time <= end_date)
+
+        total_items = query.count()
 
         events = (
             query
@@ -140,7 +139,7 @@ class TripHistoryService:
             total_drowsiness_detections = 0
 
             if e.event_type == "sign":
-                data = e.payload.get("data", []) if e.payload else []
+                data = TripHistoryService._payload_items(e.payload)
 
                 confidences = [
                     float(d["confidence"])
@@ -162,11 +161,10 @@ class TripHistoryService:
             elif e.event_type == "drowsiness":
                 if e.payload and "is_drowsy" in e.payload:
                     count = 1
-                    print("Processing drowsiness event payload:", e.payload)
                     total_drowsiness_detections = 1 if e.payload.get("is_drowsy") == True else 0
 
             elif e.event_type == "object":
-                data = e.payload.get("data", []) if e.payload else []
+                data = TripHistoryService._payload_items(e.payload)
 
                 confidences = [
                     float(d["confidence"])
@@ -186,7 +184,7 @@ class TripHistoryService:
                     avg_conf = None
 
             elif e.event_type == "lane":
-                data = e.payload.get("data", []) if e.payload else []
+                data = TripHistoryService._payload_items(e.payload)
 
                 confidences = [
                     float(d["confidence"])
@@ -214,7 +212,7 @@ class TripHistoryService:
                 "avg_confidence": avg_conf,
                 "count": count,
                 "payload": e.payload,
-                "total drownsiness detections": total_drowsiness_detections
+                "total_drowsiness_detections": total_drowsiness_detections
             })
 
             summary = grouped[day]["summary"][event_type]
@@ -236,8 +234,6 @@ class TripHistoryService:
                 )
 
                 is_drowsiness = event_type == "drowsiness"
-
-                print("Processing summary for", event_type, "is_drowsiness:", is_drowsiness)
 
                 summary_out[event_type] = {
                     "total_events": s["total_events"],
@@ -335,7 +331,6 @@ class TripHistoryService:
                 "latitude": float(latest.latitude) if latest else None,
                 "longitude": float(latest.longitude) if latest else None,
             },
-            "car_name": latest.car.name if latest and latest.car else None,
             "total_time_seconds": total_seconds,
             "total_alerts": total_alerts
         }
@@ -347,17 +342,13 @@ class TripHistoryService:
         longitude: float,
         captured_at: datetime
     ):
-        car = Car.query.filter_by(user_id=user_id).first()
-        if not car:
-            return None
-        
         trip = TripHistory(
             user_id=user_id,
-            car_id=car.id or None,
             latitude=latitude,
             longitude=longitude,
             captured_at=captured_at or datetime.now()
         )
 
         db.session.add(trip)
+        db.session.flush()
         return trip

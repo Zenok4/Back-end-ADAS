@@ -3,6 +3,10 @@ def _calc_avg_confidence(payload: dict | None) -> float | None:
         return None
 
     data = payload.get("data")
+    if data is None:
+        data = payload.get("detections")
+    if data is None:
+        data = payload.get("objects")
     if not isinstance(data, list) or not data:
         return None
 

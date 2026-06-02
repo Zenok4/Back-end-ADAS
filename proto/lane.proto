@@ -15,22 +15,39 @@ message LaneData {
   float confidence = 2;
   int32 class_id = 3;
   string class_name = 4;
+  repeated float line = 5;
 }
 
 message LaneMeta {
   double processing_time = 1;
 }
 
-message LaneDeparture {
-  string status = 1;
-  string message = 2;
-  float lane_offset = 3;
-  LaneData left_lane = 4;
-  LaneData right_lane = 5;
+message LaneBoundary {
+  string class_name = 1;
+  repeated float line = 2;
+  float confidence = 3;
+  double x_at_reference = 4;
+}
+
+message CurrentLane {
+  bool available = 1;
+  string status = 2;
+  string message = 3;
+  double reference_y = 4;
+  double vehicle_center_x = 5;
+  double lane_center_x = 6;
+  double lane_width_px = 7;
+  double offset_px = 8;
+  double offset_ratio = 9;
+  LaneBoundary left_boundary = 10;
+  LaneBoundary right_boundary = 11;
+  bool warning = 12;
+  string warning_direction = 13;
+  string warning_level = 14;
 }
 
 message LaneResponse {
   repeated LaneData detections = 1;
   LaneMeta meta = 2;
-  LaneDeparture lane_departure = 3;
+  CurrentLane current_lane = 3;
 }

@@ -14,9 +14,40 @@ def _lane_to_dict(lane_data):
         return None
     return {
         "box": list(lane_data.box),
+        "line": list(lane_data.line),
         "confidence": lane_data.confidence,
         "class_id": lane_data.class_id,
         "class_name": lane_data.class_name,
+    }
+
+
+def _boundary_to_dict(boundary):
+    if boundary is None or not boundary.class_name:
+        return None
+    return {
+        "class_name": boundary.class_name,
+        "line": list(boundary.line),
+        "confidence": boundary.confidence,
+        "x_at_reference": boundary.x_at_reference,
+    }
+
+
+def _current_lane_to_dict(current_lane):
+    return {
+        "available": current_lane.available,
+        "status": current_lane.status,
+        "message": current_lane.message,
+        "reference_y": current_lane.reference_y,
+        "vehicle_center_x": current_lane.vehicle_center_x,
+        "lane_center_x": current_lane.lane_center_x,
+        "lane_width_px": current_lane.lane_width_px,
+        "offset_px": current_lane.offset_px,
+        "offset_ratio": current_lane.offset_ratio,
+        "warning": current_lane.warning,
+        "warning_direction": current_lane.warning_direction,
+        "warning_level": current_lane.warning_level,
+        "left_boundary": _boundary_to_dict(current_lane.left_boundary),
+        "right_boundary": _boundary_to_dict(current_lane.right_boundary),
     }
 
 
@@ -39,15 +70,20 @@ class LaneService:
             for d in response.detections:
                 detections.append(_lane_to_dict(d))
 
-            departure = response.lane_departure
+            current_lane = response.current_lane
+            current_lane_data = _current_lane_to_dict(current_lane)
             data = {
                 "detections": detections,
+                "current_lane": current_lane_data,
                 "lane_departure": {
-                    "status": departure.status,
-                    "message": departure.message,
-                    "lane_offset": departure.lane_offset,
-                    "left_lane": _lane_to_dict(departure.left_lane) if departure.HasField("left_lane") else None,
-                    "right_lane": _lane_to_dict(departure.right_lane) if departure.HasField("right_lane") else None,
+                    "status": current_lane.status,
+                    "message": current_lane.message,
+                    "lane_offset": current_lane.offset_ratio,
+                    "warning": current_lane.warning,
+                    "warning_direction": current_lane.warning_direction,
+                    "warning_level": current_lane.warning_level,
+                    "left_lane": _boundary_to_dict(current_lane.left_boundary),
+                    "right_lane": _boundary_to_dict(current_lane.right_boundary),
                 },
                 "meta": {
                     "processing_time": response.meta.processing_time

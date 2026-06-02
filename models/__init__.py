@@ -8,7 +8,7 @@ from models import user, role, permission
 from models import auth_otp, sessions, detection_event, drowsiness_event  
 from models import lane_event, object_detection, sign_detection, notification, audit_log  
 
-from models import car, trip_history
+from models import trip_history
 
 
 def init_dtb(app: Flask):

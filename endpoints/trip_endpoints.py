@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 
+from database import db
 from services.history.trip_service import TripHistoryService
 from helper.normalization_response import response_error, response_success
 from type.http_constants import HttpCode
@@ -27,7 +28,6 @@ def list_trips():
           data: [
             {
               date: "YYYY-MM-DD",
-              car: { id, name, plate },
               duration_minutes: int,
               alerts: { total, drowsiness, object, lane, sign },
               events: [...]
@@ -118,6 +118,7 @@ def record_location():
             longitude=float(data["longitude"]),
             captured_at=captured_at
         )
+        db.session.commit()
 
         return jsonify(response_success(
             code=HttpCode.success,
@@ -128,6 +129,7 @@ def record_location():
         )), HttpCode.success
 
     except Exception as e:
+        db.session.rollback()
         return jsonify(response_error(
             message=str(e),
             code=HttpCode.internal_server_error
@@ -150,7 +152,6 @@ def trip_summary():
           code: int,
           data: {
             latest_location: { latitude, longitude },
-            car_name: string,
             total_time_seconds: int,
             total_alerts: int
           }
@@ -213,35 +214,47 @@ def list_events_by_day():
         }
     """
     user_id = request.args.get("user_id", type=int)
-
-    start_date = request.args.get("start_date")
-    end_date = request.args.get("end_date")
-    page = request.args.get("page", default=1, type=int)
-    page_size = request.args.get("page_size", default=100, type=int)
-    event_type = request.args.get("event_type")
-
-    if start_date:
-        start_date = datetime.fromisoformat(start_date)
-    if end_date:
-        end_date = datetime.fromisoformat(end_date)
-
-    data = TripHistoryService.list_events_by_day(
-        user_id=user_id,
-        start_date=start_date,
-        end_date=end_date,
-        event_type=event_type,
-        page=page,
-        page_size=page_size
-    )
-
-    if not data:
+    if not user_id:
         return jsonify(response_error(
-            message="No trips found",
-            code=HttpCode.success
+            message="user_id is required",
+            code=HttpCode.bad_request
+        )), HttpCode.bad_request
+
+    try:
+        start_date = request.args.get("start_date")
+        end_date = request.args.get("end_date")
+        page = request.args.get("page", default=1, type=int)
+        page_size = request.args.get("page_size", default=100, type=int)
+        event_type = request.args.get("event_type")
+
+        if start_date:
+            start_date = datetime.fromisoformat(start_date)
+        if end_date:
+            end_date = datetime.fromisoformat(end_date)
+
+        data = TripHistoryService.list_events_by_day(
+            user_id=user_id,
+            start_date=start_date,
+            end_date=end_date,
+            event_type=event_type,
+            page=page,
+            page_size=page_size
+        )
+
+        if not data:
+            return jsonify(response_success(
+                message="No trips found",
+                code=HttpCode.success
+            )), HttpCode.success
+
+        return jsonify(response_success(
+            data=data,
+            message="Trip events by day retrieved successfully",
+            code=HttpCode.success,
         )), HttpCode.success
 
-    return jsonify(response_success(
-        data=data,
-        message="Trip events by day retrieved successfully",
-        code=HttpCode.success,
-    )), HttpCode.success
+    except Exception as e:
+        return jsonify(response_error(
+            message=str(e),
+            code=HttpCode.internal_server_error
+        )), HttpCode.internal_server_error

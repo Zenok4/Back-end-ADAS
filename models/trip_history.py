@@ -12,12 +12,6 @@ class TripHistory(db.Model):
         nullable=False
     )
 
-    car_id = db.Column(
-        db.BigInteger,
-        db.ForeignKey("cars.id", ondelete="CASCADE"),
-        nullable=False
-    )
-
     latitude = db.Column(db.Numeric(10, 7), nullable=False)
     longitude = db.Column(db.Numeric(10, 7), nullable=False)
 
@@ -34,7 +28,6 @@ class TripHistory(db.Model):
     )
 
     user = db.relationship("User", backref="trip_history")
-    car = db.relationship("Car", backref="trip_history")
 
     __table_args__ = (
         db.CheckConstraint(
@@ -45,7 +38,6 @@ class TripHistory(db.Model):
             "longitude >= -180 AND longitude <= 180",
             name="check_trip_history_longitude"
         ),
-        db.Index("idx_trip_history_car_time", "car_id", "captured_at"),
         db.Index("idx_trip_history_user_time", "user_id", "captured_at"),
     )
 
@@ -53,7 +45,6 @@ class TripHistory(db.Model):
         return {
             "id": self.id,
             "user_id": self.user_id,
-            "car_id": self.car_id,
             "latitude": float(self.latitude),
             "longitude": float(self.longitude),
             "captured_at": self.captured_at.isoformat() if self.captured_at else None,
